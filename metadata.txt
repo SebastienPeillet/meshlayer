@@ -1,0 +1,16 @@
+[general]
+name=meshlayer
+qgisMinimumVersion=2.6
+description=render your simulation results
+about=Numerical attributes defined on a point layer are interpolated on triangles defined by a connectivity table.
+version=0.0.1
+author=Oslandia
+email=infos@oslandia.com
+homepage=https://github.com/Oslandia/meshlayer
+repository=https://github.com/Oslandia/meshlayer
+tracker=https://github.com/Oslandia/thyrsis/meshlayer
+icon=mesh.png
+experimental=True
+deprecated=False
+category=Vector
+tags=simulation
