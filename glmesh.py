@@ -138,7 +138,7 @@ class ColorLegend(QObject):
         
         painter = QPainter(img)
         
-        painter.drawText(headerPosition, self.__title+" ["+self.__units+"]" + " " + self.__scale)
+        painter.drawText(headerPosition, self.__title+" ["+self.__units+"]")
         if multText:
             painter.drawText(headerPosition+QPoint(0,textHeight), multText)
         painter.drawImage(barPosition, self.__colorRamp.scaled(barWidth, barHeight) )

@@ -31,7 +31,6 @@ class MeshLayerType(QgsPluginLayerType):
     def createLayer(self):
         return MeshLayer()
 
-
         # indicate that we have shown the properties dialog
         return True
 
@@ -51,10 +50,22 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
     
     def draw(self, settings, ctx):
         im = QgsLayerTreeModelLegendNode.ItemMetrics()
-        im.symbolSize = QSizeF(self.image.width(), self.image.height()) 
+        context = QgsRenderContext()
+        context.setScaleFactor( settings.dpi() / 25.4 )
+        context.setRendererScale( settings.mapScale() )
+        context.setMapToPixel( QgsMapToPixel( 1 / ( settings.mmPerMapUnit() * context.scaleFactor() ) ) )
+        dotsPerMM = context.scaleFactor()
+        im.symbolSize = QSizeF(self.image.width()/dotsPerMM, self.image.height()/dotsPerMM) 
         im.labeSize =  QSizeF(0,0)
         if ctx:
+            currentXPosition = ctx.point.x()
+            currentYCoord = ctx.point.y() \
+                    + settings.symbolSize().height()/2;
+            ctx.painter.save()
+            ctx.painter.translate(currentXPosition, currentYCoord)
+            ctx.painter.scale(1.0/dotsPerMM, 1.0/dotsPerMM)
             ctx.painter.drawImage(0, 0, self.image)
+            ctx.painter.restore()
         return im
 
 class MeshLayerLegend(QgsDefaultPluginLayerLegend):
@@ -99,8 +110,6 @@ class MeshLayer(QgsPluginLayer):
         return self.__legend
 
     def __load(self, meshDataProvider):
-        print "loading"
-
         self.setCrs(meshDataProvider.crs())
         self.setExtent(meshDataProvider.extent())
         self.__meshDataProvider = meshDataProvider
@@ -115,6 +124,7 @@ class MeshLayer(QgsPluginLayer):
                 self.__legend
                 )
         self.setValid(self.__meshDataProvider.isValid())
+        self.__symbologyChanged()
 
     def __symbologyChanged(self):
         self.__layerLegend = MeshLayerLegend(self, self.__legend)
@@ -243,6 +253,7 @@ if __name__ == "__main__":
     layer = MeshLayer(uri, 'test_layer', "wind")
     layer.dataProvider().setDate(int(sys.argv[2]))
     print layer.dataProvider().dataSourceUri()
+    print layer.dataProvider().nodeValues()
 
     exit(0)
     # the rest should be ported to a specific test

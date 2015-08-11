@@ -17,6 +17,9 @@ class MeshDataProviderRegistry(object):
             """add provider type to registry"""
             self.__providers[providerKey] = type_
 
+        def removeDataProviderType(self, providerKey):
+            """remove provider from registry"""
+
     @staticmethod 
     def instance():
         """returns the singleton instance"""

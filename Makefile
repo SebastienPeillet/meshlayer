@@ -1,6 +1,8 @@
 FILES=\
     metadata.txt\
-    LICENSE
+    LICENSE \
+    images \
+    exemple
 
 package: ${FILES} $(wildcard *.py)
 	rm -rf meshlayer
