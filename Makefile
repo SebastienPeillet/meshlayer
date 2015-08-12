@@ -1,8 +1,7 @@
 FILES=\
     metadata.txt\
     LICENSE \
-    images \
-    exemple
+    images
 
 package: ${FILES} $(wildcard *.py)
 	rm -rf meshlayer
@@ -22,5 +21,5 @@ test:
 
 
 clean:
-	find . -name '*.pyc' | xargs rm
-	rm meshlayer.zip
+	find . -name '*.pyc' | xargs rm -f
+	rm -f meshlayer.zip
