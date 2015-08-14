@@ -74,7 +74,6 @@ class DemoPlugin():
         for action in self.actions:
             self.iface.removeToolBarIcon(action)
         QgsPluginLayerRegistry.instance().removePluginLayerType(MeshLayer.LAYER_TYPE)
-        MeshDataProviderRegistry.instance().removeDataProviderType("wind")
 
     def animate(self):
         if self.iface.mapCanvas().isDrawing():

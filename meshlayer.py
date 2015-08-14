@@ -95,7 +95,7 @@ class MeshLayer(QgsPluginLayer):
         self.__meshDataProvider = None
         self.__legend = None
 
-        if uri and name and providerKey:
+        if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
         self.__drawException.connect(self.__raise)
 

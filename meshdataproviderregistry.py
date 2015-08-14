@@ -11,7 +11,17 @@ class MeshDataProviderRegistry(object):
 
         def provider(self, providerKey, dataSource):
             """returns a mesh provider instance"""
-            return self.__providers[providerKey](dataSource)
+            if not providerKey:
+                raise RuntimeError("Missing providerKey")
+
+            prvdr = self.__providers[providerKey](dataSource)
+            
+            if not prvdr:
+                raise RuntimeError("Cannot create provider "+providerKey+" from uri:"+dataSource)
+            if not prvdr.isValid():
+                raise RuntimeError("Invalid provider "+providerKey+" from uri:"+dataSource)
+
+            return prvdr
 
         def addDataProviderType(self, providerKey, type_):
             """add provider type to registry"""

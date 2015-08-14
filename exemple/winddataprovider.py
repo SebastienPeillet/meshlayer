@@ -13,7 +13,7 @@ class WindDataProvider(MeshDataProvider):
 
     def __init__(self, uri):
         MeshDataProvider.__init__(self, uri)
-        self.__directory = str(QgsDataSourceURI(self.dataSourceUri()).param("directory"))
+        self.__directory = str(self.uri().param("directory"))
 
         # load timestamps
         with open(os.path.join(self.__directory, 'time_stamp')) as fil:

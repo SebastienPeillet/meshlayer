@@ -74,6 +74,9 @@ class MeshDataProvider(QgsDataProvider):
     def dataSourceUri(self):
         return self.__uri.uri()
 
+    def uri(self):
+        return self.__uri
+
     def readXml(self, node):
         element = node.toElement()
         self.__uri = QgsDataSourceURI(element.attribute("uri"))
