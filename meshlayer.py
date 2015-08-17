@@ -38,33 +38,41 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
     def __init__(self, nodeLayer, parent, legend):
         QgsLayerTreeModelLegendNode.__init__(self, nodeLayer, parent)
         self.text = ""
-        self.image = legend.image()
+        self.__legend = legend
 
     def data(self, role):
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return self.text
         elif role  == Qt.DecorationRole:
-            return self.image
+            return self.__legend.image()
         else:
             return None
     
     def draw(self, settings, ctx):
+        symbolLabelFont = settings.style(QgsComposerLegendStyle.SymbolLabel).font()
+        textHeight = settings.fontHeightCharacterMM(symbolLabelFont, '0');
+
         im = QgsLayerTreeModelLegendNode.ItemMetrics()
         context = QgsRenderContext()
         context.setScaleFactor( settings.dpi() / 25.4 )
         context.setRendererScale( settings.mapScale() )
         context.setMapToPixel( QgsMapToPixel( 1 / ( settings.mmPerMapUnit() * context.scaleFactor() ) ) )
-        dotsPerMM = context.scaleFactor()
-        im.symbolSize = QSizeF(self.image.width()/dotsPerMM, self.image.height()/dotsPerMM) 
-        im.labeSize =  QSizeF(0,0)
+        sz = self.__legend.sceneRect().size()
+        aspect = sz.width() / sz.height()
+        h = textHeight*16
+        w = aspect*h
+        im.symbolSize = QSizeF(w, h)
+        im.labeSize =  QSizeF(0, 0)
         if ctx:
             currentXPosition = ctx.point.x()
-            currentYCoord = ctx.point.y() \
-                    + settings.symbolSize().height()/2;
+            currentYCoord = ctx.point.y() #\
+                    #+ settings.symbolSize().height()/2;
             ctx.painter.save()
             ctx.painter.translate(currentXPosition, currentYCoord)
-            ctx.painter.scale(1.0/dotsPerMM, 1.0/dotsPerMM)
-            ctx.painter.drawImage(0, 0, self.image)
+            rect = QRectF()
+            rect.setSize(QSizeF(im.symbolSize))
+            self.__legend.render(ctx.painter, rect) 
+            #ctx.painter.drawImage(0, 0, self.image)
             ctx.painter.restore()
         return im
 

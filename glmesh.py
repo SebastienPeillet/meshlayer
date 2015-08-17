@@ -3,10 +3,9 @@
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 
-from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat, QGLContext
-
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat, QGLContext
 
 import numpy
 from math import log, ceil, exp
@@ -31,7 +30,7 @@ def compute_matrix(extent):
                        [0., 0., 1., 0.],
                        [dx*sx, dy*sy, 0., 1.]], numpy.float32, 'F')
 
-class ColorLegend(QObject):
+class ColorLegend(QGraphicsScene):
     """A legend provides the symbology for a layer.
     The legend is responsible for the translation of values into color.
     For performace and flexibility reasons the legend provide shader 
@@ -40,8 +39,8 @@ class ColorLegend(QObject):
 
     symbologyChanged = pyqtSignal()
     
-    def __init__(self):
-        QObject.__init__(self)
+    def __init__(self, parent=None):
+        QGraphicsScene.__init__(self, parent)
         self.__minValue = 0
         self.__maxValue = 1
         self.__transparency = 0
@@ -115,42 +114,56 @@ class ColorLegend(QObject):
 
     def image(self):
         """Return an image representing the legend"""
-        # find the closest appropriate power of the max values
-
-        mult, multText = multiplier(self.__maxValue)
-
-        textHeight = QFontMetrics(QFont()).height()
-        legendWidth = 180
-        barWidth = 20
-        barHeight = 150
-        barPosition = QPoint(0, 2.5*textHeight if multText else 1.5*textHeight)
-        headerPosition = QPoint(0,15)
-        bottomSpace = 15
-        tickOrigin = barPosition+QPoint(int(1.5*barWidth), textHeight/3)
-        values = self.values()
-        tickSpacing = float(barHeight)/(len(values)-1)
-
+        self.__refresh()
+        sz = self.sceneRect().size().toSize()
         img = QImage(
-                legendWidth, 
-                barPosition.y()+barHeight+bottomSpace, 
+                sz.width(), 
+                sz.height(), 
                 self.__colorRamp.format())
         img.fill(Qt.transparent)
-        
-        painter = QPainter(img)
-        
-        painter.drawText(headerPosition, self.__title+" ["+self.__units+"]")
-        if multText:
-            painter.drawText(headerPosition+QPoint(0,textHeight), multText)
-        painter.drawImage(barPosition, self.__colorRamp.scaled(barWidth, barHeight) )
-        for i, value in enumerate(values):
-            painter.drawText(tickOrigin+QPoint(5, int(i*tickSpacing)), "%4.5f"%(float("%.2g"%(value/mult))))
-            painter.drawLine(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing)))
-
+        with QPainter(img) as p:
+            self.render(p)
         return img
+
+    #def render(self, painter, target = QRectF(), source = QRectF(), aspectRatioMode = Qt.KeepAspectRatio):
+    #    self.__refresh()
+    #    QGraphicsScene.render(self, painter, target, source, aspectRatioMode)
+
+    def __refresh(self):
+        """refresh the legend"""
+        self.clear()
+        # find the closest appropriate power of the max values
+        mult, multText = multiplier(self.__maxValue)
+
+        values = self.values()
+
+        textHeight = QFontMetrics(QFont()).height()
+        legendWidth = textHeight*20
+        barWidth = textHeight
+        barHeight = textHeight*len(values)*1.2
+        barPosition = QPoint(0, 2.75*textHeight if multText else 1.75*textHeight)
+        headerPosition = QPoint(0,0)
+        bottomSpace = 15
+        tickSpacing = float(barHeight)/(len(values)-1)
+
+        text = self.addText(self.__title+" ["+self.__units+"]")
+        text.setPos(headerPosition)
+        if multText:
+            text = self.addText(multText)
+            text.setPos(headerPosition+QPoint(0,textHeight))
+            
+        img = self.addPixmap(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
+        img.setPos(barPosition)
+        for i, value in enumerate(values):
+            text = self.addText("%4.5f"%(float("%.2g"%(value/mult))))
+            text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
+            self.addLine(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
+
 
     def setLogScale(self, trueOrFalse=True):
         self.__scale = "log" if trueOrFalse else "linear"
         self.__checkValues()
+        self.__refresh()
         self.symbologyChanged.emit()
 
     def hasLogScale(self):
@@ -158,6 +171,7 @@ class ColorLegend(QObject):
 
     def setTitle(self, text):
         self.__title = text
+        self.__refresh()
         self.symbologyChanged.emit()
 
     def title(self):
@@ -166,6 +180,7 @@ class ColorLegend(QObject):
     def setUnits(self, text):
         """set the units to display in legend"""
         self.__units = text
+        self.__refresh()
         self.symbologyChanged.emit()
 
     def units(self):
@@ -188,6 +203,7 @@ class ColorLegend(QObject):
         try:
             self.__minValue = float(value)
             self.__checkValues()
+            self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
             return
@@ -196,6 +212,7 @@ class ColorLegend(QObject):
         try:
             self.__maxValue = float(value)
             self.__checkValues()
+            self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
             return
@@ -206,6 +223,7 @@ class ColorLegend(QObject):
     def setTransparency(self, value):
         try:
             self.__transparency = float(value)
+            self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
             return
@@ -213,6 +231,7 @@ class ColorLegend(QObject):
     def setColorRamp(self, rampImageFile):
         self.__colorRampFile = rampImageFile
         self.__colorRamp = QImage(rampImageFile)
+        self.__refresh()
         self.symbologyChanged.emit()
 
     def transparencyPercent(self):
@@ -257,6 +276,7 @@ class ColorLegend(QObject):
         self.setColorRamp(element.attribute("colorRampFile"))
         self.setUnits(element.attribute("units"))
         self.setLogScale(element.attribute("scale")=="log")
+        self.__refresh()
         return True
 
     def writeXml(self, node, doc):
@@ -280,7 +300,7 @@ class GlMesh(QObject):
 
     __sizeChangeRequested = pyqtSignal(QSize)
 
-    def __init__(self, vtx, idx, legend = ColorLegend()):
+    def __init__(self, vtx, idx, legend):
         QObject.__init__(self)
         self.__vtx = numpy.require(vtx, numpy.float32, 'F')
         self.__idx = numpy.require(idx, numpy.int32, 'F')
@@ -405,7 +425,9 @@ class GlMesh(QObject):
         return img.copy( 0, 0, imageSize.width(), imageSize.height()) 
 
 if __name__ == "__main__":
-    app = QApplication([])
+    import sys
+    app = QApplication(sys.argv)
+
     legend = ColorLegend()
     legend.setMinValue(.01)
     legend.setMaxValue(33)
@@ -427,5 +449,9 @@ if __name__ == "__main__":
             (-4, -3, 4, 3),
             (.01, .01, .1, 33, 33, .1))
     img.save('/tmp/test_gl_mesh_log.png')
+
+    #legend.setMinValue(.01)
+    #legend.setMaxValue(33000)
+    legend.image().save("/tmp/test_gl_mesh_legend.png")
 
 
