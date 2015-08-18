@@ -393,7 +393,6 @@ class GlMesh(QObject):
 
         glClearColor(0., 0., 0., 0.)
         glEnableClientState(GL_VERTEX_ARRAY)
-        glEnableClientState(GL_COLOR_ARRAY)
         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
         glEnable(GL_TEXTURE_2D)
 
