@@ -10,7 +10,7 @@ from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat, QGLContext
 import numpy
 from math import log, ceil, exp
 
-from utilities import complete_filename, multiplier
+from utilities import complete_filename
 
 def roundUpSize(size):
     """return size roudup to the nearest power of 2"""
@@ -132,30 +132,26 @@ class ColorLegend(QGraphicsScene):
     def __refresh(self):
         """refresh the legend"""
         self.clear()
-        # find the closest appropriate power of the max values
-        mult, multText = multiplier(self.__maxValue)
-
         values = self.values()
+        format_ = "%.2e"
+        if self.__maxValue < 10000 and self.__minValue > 0.01:
+            format_ = ".1f"
 
         textHeight = QFontMetrics(QFont()).height()
         legendWidth = textHeight*20
         barWidth = textHeight
         barHeight = textHeight*len(values)*1.2
-        barPosition = QPoint(0, 2.75*textHeight if multText else 1.75*textHeight)
+        barPosition = QPoint(0, 1.75*textHeight)
         headerPosition = QPoint(0,0)
         bottomSpace = 15
         tickSpacing = float(barHeight)/(len(values)-1)
 
         text = self.addText(self.__title+" ["+self.__units+"]")
         text.setPos(headerPosition)
-        if multText:
-            text = self.addText(multText)
-            text.setPos(headerPosition+QPoint(0,textHeight))
-            
         img = self.addPixmap(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
         img.setPos(barPosition)
         for i, value in enumerate(values):
-            text = self.addText("%4.5f"%(float("%.2g"%(value/mult))))
+            text = self.addText(format_%(value))
             text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
             self.addLine(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
 
