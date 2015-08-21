@@ -177,8 +177,6 @@ class MeshLayer(QgsPluginLayer):
     def draw(self, rendererContext):
         """This function is called by the rendering thread. 
         GlMesh must be created in the main thread."""
-        with open('log.txt','a') as f:
-            f.write('drawing mesh layer\n')
         try:
             painter = rendererContext.painter()
             img = None
