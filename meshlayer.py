@@ -23,6 +23,7 @@ from glmesh import GlMesh, ColorLegend
 
 from meshdataproviderregistry import MeshDataProviderRegistry
 
+from utilities import linemerge
 
 class MeshLayerType(QgsPluginLayerType):
     def __init__(self):
