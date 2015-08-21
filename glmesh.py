@@ -135,7 +135,7 @@ class ColorLegend(QGraphicsScene):
         values = self.values()
         format_ = "%.2e"
         if self.__maxValue < 10000 and self.__minValue > 0.01:
-            format_ = ".1f"
+            format_ = "%.1f"
 
         textHeight = QFontMetrics(QFont()).height()
         legendWidth = textHeight*20
@@ -151,6 +151,7 @@ class ColorLegend(QGraphicsScene):
         img = self.addPixmap(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
         img.setPos(barPosition)
         for i, value in enumerate(values):
+            print format_, value
             text = self.addText(format_%(value))
             text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
             self.addLine(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
