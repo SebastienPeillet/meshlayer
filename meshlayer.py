@@ -30,6 +30,7 @@ class MeshLayerType(QgsPluginLayerType):
         QgsPluginLayerType.__init__(self, MeshLayer.LAYER_TYPE)
 
     def createLayer(self):
+        print "create mesh layer from MeshLayerType"
         return MeshLayer()
 
         # indicate that we have shown the properties dialog
@@ -93,6 +94,7 @@ class MeshLayer(QgsPluginLayer):
     LAYER_TYPE="mesh_layer"
 
     __drawException = pyqtSignal(str)
+    __imageChangeRequested = pyqtSignal()
 
     def __raise(self, err):
         raise Exception(err)
@@ -103,6 +105,10 @@ class MeshLayer(QgsPluginLayer):
         QgsPluginLayer.__init__(self, MeshLayer.LAYER_TYPE, name)
         self.__meshDataProvider = None
         self.__legend = None
+        self.__imageChangedCondition = QWaitCondition()
+        self.__imageChangedMutex = QMutex()
+        self.__imageChangeRequested.connect(self.__drawInMainThread)
+        self.__img = None
 
         if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
@@ -142,6 +148,7 @@ class MeshLayer(QgsPluginLayer):
         self.triggerRepaint()
 
     def readXml(self, node):
+        print "mesh_layer read xml"
         element = node.toElement()
         provider = node.namedItem("meshDataProvider").toElement()
         meshDataProvider = MeshDataProviderRegistry.instance().provider(
@@ -157,7 +164,9 @@ class MeshLayer(QgsPluginLayer):
 
     def writeXml(self, node, doc):
         """write plugin layer type to project (essential to be read from project)"""
+        print "wrinting mesh_layer"
         element = node.toElement()
+        element.setAttribute("debug", "just a test")
         element.setAttribute("type", "plugin")
         element.setAttribute("name", MeshLayer.LAYER_TYPE)
 
@@ -175,19 +184,31 @@ class MeshLayer(QgsPluginLayer):
     def dataProvider(self):
         return self.__meshDataProvider
 
+    def __drawInMainThread(self):
+        rendererContext = self.__ctx
+        painter = rendererContext.painter()
+        self.__imageChangedMutex.lock()
+        ext = rendererContext.extent()
+        self.__img = self.__glMesh.image(
+                painter.window().size(),
+                (ext.xMinimum(), ext.yMinimum(), ext.xMaximum(), ext.yMaximum()),
+                self.__meshDataProvider.nodeValues())
+        self.__imageChangedMutex.unlock()
+        self.__imageChangedCondition.wakeOne();
+
     def draw(self, rendererContext):
         """This function is called by the rendering thread. 
         GlMesh must be created in the main thread."""
         try:
             painter = rendererContext.painter()
-            img = None
-            ext = rendererContext.extent()
-            img = self.__glMesh.image(
-                    painter.window().size(),
-                    (ext.xMinimum(), ext.yMinimum(), ext.xMaximum(), ext.yMaximum()),
-                    self.__meshDataProvider.nodeValues())
-        
-            painter.drawImage(painter.window(), img)
+            self.__imageChangedMutex.lock()
+            self.__ctx = rendererContext
+            self.__img = None
+            self.__imageChangeRequested.emit()
+            while not self.__img:
+                self.__imageChangedCondition.wait(self.__imageChangedMutex);
+            self.__imageChangedMutex.unlock()
+            painter.drawImage(painter.window(), self.__img)
             return True
         except Exception as e:
             # since we are in a thread, we must re-raise the exception

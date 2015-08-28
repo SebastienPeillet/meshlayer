@@ -151,7 +151,6 @@ class ColorLegend(QGraphicsScene):
         img = self.addPixmap(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
         img.setPos(barPosition)
         for i, value in enumerate(values):
-            print format_, value
             text = self.addText(format_%(value))
             text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
             self.addLine(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
@@ -293,19 +292,11 @@ class GlMesh(QObject):
     can be called in another thread.
     This class encapsulates the transformation between an extend and an image size.
     """
-    #__contextMutex = QMutex()
-
-    __sizeChangeRequested = pyqtSignal(QSize)
-
     def __init__(self, vtx, idx, legend):
         QObject.__init__(self)
         self.__vtx = numpy.require(vtx, numpy.float32, 'F')
         self.__idx = numpy.require(idx, numpy.int32, 'F')
         self.__pixBuf = None
-        self.__sizeChangeRequested.connect(self.__resize)
-        self.__sizeChangedCondition = QWaitCondition()
-        self.__sizeChangedMutex = QMutex()
-        self.__sizeChanged = False
         self.__legend = legend
 
         #self.__previousLegend = legend
@@ -324,7 +315,6 @@ class GlMesh(QObject):
 
         self.__pixBuf = QGLPixelBuffer(roundupImageSize, fmt)
         assert self.__pixBuf.format().alpha()
-        #GlMesh.__contextMutex.lock()
         self.__pixBuf.makeCurrent()
         self.__pixBuf.bindToDynamicTexture(self.__pixBuf.generateDynamicTexture())
         vertex_shader = shaders.compileShader("""
@@ -346,17 +336,14 @@ class GlMesh(QObject):
         self.__shaders = shaders.compileProgram(vertex_shader, fragment_shader)
         self.__legend._setUniformsLocation(self.__shaders)
         self.__pixBuf.doneCurrent()
-        #GlMesh.__contextMutex.unlock()
-
-        self.__sizeChangedMutex.lock()
-        self.__sizeChanged = True
-        self.__sizeChangedMutex.unlock()
-        self.__sizeChangedCondition.wakeOne();
     
     def image(self, imageSize, extent, values):
         """Return the rendered image of a given size for values defined at each vertex.
         Values are normalized using valueRange = (minValue, maxValue).
         transparency is in the range [0,1]"""
+
+        if QApplication.instance().thread() != QThread.currentThread():
+            raise RuntimeError("trying to use gl draw calls in a thread")
 
         if not len(values):
             img = QImage(imageSize)
@@ -370,22 +357,12 @@ class GlMesh(QObject):
                 #or self.__legend != self.__previousLegend:
             # we need to call the main thread for a change of the
             # pixel buffer and wait for the change to happen
-            if QApplication.instance().thread() == QThread.currentThread():
-                self.__resize(roundupSz)
-            else:
-                self.__sizeChangedMutex.lock()
-                self.__sizeChanged = False
-                self.__sizeChangeRequested.emit(roundupSz)
-                while not self.__sizeChanged:
-                    self.__sizeChangedCondition.wait(self.__sizeChangedMutex);
-                self.__sizeChangedMutex.unlock()
-            #self.__previousLegend = self.__legend
+            self.__resize(roundupSz)
 
         val = numpy.require(values, numpy.float32) \
                 if not isinstance(values, numpy.ndarray)\
                 else values
 
-        #GlMesh.__contextMutex.lock()
         self.__pixBuf.makeCurrent()
 
         glClearColor(0., 0., 0., 0.)
