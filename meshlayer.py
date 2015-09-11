@@ -30,7 +30,6 @@ class MeshLayerType(QgsPluginLayerType):
         QgsPluginLayerType.__init__(self, MeshLayer.LAYER_TYPE)
 
     def createLayer(self):
-        print "create mesh layer from MeshLayerType"
         return MeshLayer()
 
         # indicate that we have shown the properties dialog
@@ -148,7 +147,6 @@ class MeshLayer(QgsPluginLayer):
         self.triggerRepaint()
 
     def readXml(self, node):
-        print "mesh_layer read xml"
         element = node.toElement()
         provider = node.namedItem("meshDataProvider").toElement()
         meshDataProvider = MeshDataProviderRegistry.instance().provider(
@@ -164,7 +162,6 @@ class MeshLayer(QgsPluginLayer):
 
     def writeXml(self, node, doc):
         """write plugin layer type to project (essential to be read from project)"""
-        print "wrinting mesh_layer"
         element = node.toElement()
         element.setAttribute("debug", "just a test")
         element.setAttribute("type", "plugin")
@@ -190,9 +187,14 @@ class MeshLayer(QgsPluginLayer):
         self.__imageChangedMutex.lock()
         ext = rendererContext.extent()
         self.__img = self.__glMesh.image(
+                self.__meshDataProvider.nodeValues(),
                 painter.window().size(),
-                (ext.xMinimum(), ext.yMinimum(), ext.xMaximum(), ext.yMaximum()),
-                self.__meshDataProvider.nodeValues())
+                (.5*(ext.xMinimum() + ext.xMaximum()), 
+                 .5*(ext.yMinimum() + ext.yMaximum())),
+                (rendererContext.mapToPixel().mapUnitsPerPixel(), 
+                 rendererContext.mapToPixel().mapUnitsPerPixel()),
+                rendererContext.mapToPixel().mapRotation()
+                )
         self.__imageChangedMutex.unlock()
         self.__imageChangedCondition.wakeOne();
 
@@ -240,9 +242,6 @@ class MeshLayer(QgsPluginLayer):
                                 if val[edge[1]] != val[edge[0]]\
                                 else None
                         if alpha: # the isoline crosses the edge
-                            #print alpha
-                            #print val[tri[0]], val[tri[1]], val[tri[2]]
-                            #print val[edge[0]], val[edge[1]]
                             assert alpha >= 0 and alpha <= 1
                             line.append( (1-alpha)*vtx[edge[0]] + alpha*vtx[edge[1]])
                         else: # the edge is part of the isoline

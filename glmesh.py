@@ -17,19 +17,6 @@ def roundUpSize(size):
     return QSize(pow(2, ceil(log(size.width())/log(2))),
                  pow(2, ceil(log(size.height())/log(2))))
 
-def compute_matrix(extent):
-    """The openGL display is mapped on [-1,1] on x and y
-    we want the matrix that transform the coordinates in extend
-    to openGL.
-    """
-    [xMin, yMin, xMax, yMax] = extent
-    sx, sy = 2. / (xMax-xMin), 2. / (yMax - yMin)
-    dx, dy = -.5 * (xMin + xMax), -.5 * (yMin + yMax)
-    return numpy.require([[sx, 0., 0., 0.],
-                       [0., sy, 0., 0.],
-                       [0., 0., 1., 0.],
-                       [dx*sx, dy*sy, 0., 1.]], numpy.float32, 'F')
-
 class ColorLegend(QGraphicsScene):
     """A legend provides the symbology for a layer.
     The legend is responsible for the translation of values into color.
@@ -337,7 +324,7 @@ class GlMesh(QObject):
         self.__legend._setUniformsLocation(self.__shaders)
         self.__pixBuf.doneCurrent()
     
-    def image(self, imageSize, extent, values):
+    def image(self, values, imageSize, center, mapUnitsPerPixel, rotation=0):
         """Return the rendered image of a given size for values defined at each vertex.
         Values are normalized using valueRange = (minValue, maxValue).
         transparency is in the range [0,1]"""
@@ -373,15 +360,17 @@ class GlMesh(QObject):
         glClear(GL_COLOR_BUFFER_BIT)
         glLoadIdentity()
 
-        # compute the transformation
-        ratio = (float(roundupSz.width()-imageSize.width())/imageSize.width(),
-                 float(roundupSz.height()-imageSize.height())/imageSize.height())
-        roundupExtent = (extent[0],
-                         extent[1] - ratio[1]*(extent[3]-extent[1]),
-                         extent[2] + ratio[0]*(extent[2]-extent[0]),
-                         extent[3])
+        # scale
+        glScalef(2./(roundupSz.width()*mapUnitsPerPixel[0]), 
+                 2./(roundupSz.height()*mapUnitsPerPixel[1]),
+                 1.)
+        # rotate
+        glRotatef(-rotation, 0, 0, 1)
 
-        glMultMatrixf(compute_matrix(roundupExtent))
+        # translate
+        glTranslatef(-center[0],
+                     -center[1],
+                     0)
 
         glUseProgram(self.__shaders)
 
@@ -395,7 +384,9 @@ class GlMesh(QObject):
         self.__pixBuf.doneCurrent()
         #GlMesh.__contextMutex.unlock()
 
-        return img.copy( 0, 0, imageSize.width(), imageSize.height()) 
+        return img.copy( .5*(roundupSz.width()-imageSize.width()), 
+                         .5*(roundupSz.height()-imageSize.height()), 
+                         imageSize.width(), imageSize.height()) 
 
 
 
