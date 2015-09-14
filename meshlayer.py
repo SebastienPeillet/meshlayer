@@ -112,6 +112,7 @@ class MeshLayer(QgsPluginLayer):
         if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
         self.__drawException.connect(self.__raise)
+        self.__destCRS = None
 
     def setColorLegend(self, legend):
         if self.__legend:
@@ -183,9 +184,23 @@ class MeshLayer(QgsPluginLayer):
 
     def __drawInMainThread(self):
         rendererContext = self.__ctx
+
+        transform = rendererContext.coordinateTransform()
+        if transform \
+                and transform.destCRS() != self.__destCRS:
+            self.__destCRS = transform.destCRS()
+            vtx = numpy.array(self.__meshDataProvider.nodeCoord())
+            def transf(x):
+                p = transform.transform(x[0], x[1])
+                return [p.x(), p.y(), x[2]]
+            vtx = numpy.apply_along_axis(transf, 1, vtx)
+            self.__glMesh.resetCoord(vtx)
+
         painter = rendererContext.painter()
         self.__imageChangedMutex.lock()
         ext = rendererContext.extent()
+        if transform:
+            ext = transform.transform(ext)
         self.__img = self.__glMesh.image(
                 self.__meshDataProvider.nodeValues(),
                 painter.window().size(),

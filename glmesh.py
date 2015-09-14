@@ -324,6 +324,10 @@ class GlMesh(QObject):
         self.__legend._setUniformsLocation(self.__shaders)
         self.__pixBuf.doneCurrent()
     
+    def resetCoord(self, vtx):
+        self.__vtx = numpy.require(vtx, numpy.float32, 'F')
+
+
     def image(self, values, imageSize, center, mapUnitsPerPixel, rotation=0):
         """Return the rendered image of a given size for values defined at each vertex.
         Values are normalized using valueRange = (minValue, maxValue).
