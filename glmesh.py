@@ -122,7 +122,6 @@ class ColorLegend(QGraphicsScene):
         grp = self.createItems()
         for item in grp.childItems():
             self.addItem(item);
-        print "legend refresh ", len(self.items())
 
     def createItems(self):
         """returns a QGraphicsItemGroup that contains legend items"""
@@ -201,7 +200,6 @@ class ColorLegend(QGraphicsScene):
             self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
-            print "setMinValue ValueError"
             return
 
     def setMaxValue(self, value):
@@ -211,7 +209,6 @@ class ColorLegend(QGraphicsScene):
             self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
-            print "setMaxValue ValueError"
             return
 
     def setTransparencyPercent(self, value):
@@ -223,7 +220,6 @@ class ColorLegend(QGraphicsScene):
             self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
-            print "setTransparency ValueError"
             return
 
     def setColorRamp(self, rampImageFile):
