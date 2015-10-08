@@ -119,6 +119,14 @@ class ColorLegend(QGraphicsScene):
     def __refresh(self):
         """refresh the legend"""
         self.clear()
+        grp = self.createItems()
+        for item in grp.childItems():
+            self.addItem(item);
+        print "legend refresh ", len(self.items())
+
+    def createItems(self):
+        """returns a QGraphicsItemGroup that contains legend items"""
+        grp = QGraphicsItemGroup()
         values = self.values()
         format_ = "%.2e"
         if self.__maxValue < 10000 and self.__minValue > 0.01:
@@ -133,15 +141,19 @@ class ColorLegend(QGraphicsScene):
         bottomSpace = 15
         tickSpacing = float(barHeight)/(len(values)-1)
 
-        text = self.addText(self.__title+" ["+self.__units+"]")
+        text = QGraphicsTextItem(self.__title+" ["+self.__units+"]")
+        grp.addToGroup(text)
         text.setPos(headerPosition)
-        img = self.addPixmap(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
+        img = QGraphicsPixmapItem(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
+        grp.addToGroup(img)
         img.setPos(barPosition)
         for i, value in enumerate(values):
-            text = self.addText(format_%(value))
+            text = QGraphicsTextItem(format_%(value))
+            grp.addToGroup(text)
             text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
-            self.addLine(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
-
+            line = QGraphicsLineItem(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
+            grp.addToGroup(line)
+        return grp
 
     def setLogScale(self, trueOrFalse=True):
         self.__scale = "log" if trueOrFalse else "linear"
@@ -189,6 +201,7 @@ class ColorLegend(QGraphicsScene):
             self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
+            print "setMinValue ValueError"
             return
 
     def setMaxValue(self, value):
@@ -198,6 +211,7 @@ class ColorLegend(QGraphicsScene):
             self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
+            print "setMaxValue ValueError"
             return
 
     def setTransparencyPercent(self, value):
@@ -209,6 +223,7 @@ class ColorLegend(QGraphicsScene):
             self.__refresh()
             self.symbologyChanged.emit()
         except ValueError:
+            print "setTransparency ValueError"
             return
 
     def setColorRamp(self, rampImageFile):
