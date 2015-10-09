@@ -7,6 +7,12 @@ from math import log, exp as exp_
 def complete_filename(name):
     return os.path.join(os.path.dirname(__file__), name)
 
+def format_(min_, max_):
+    format_ = "%.2e"
+    if max_ < 10000 and min_ > 0.01:
+        format_ = "%.1f"
+    return format_
+
 def multiplier(value):
     """return a couple of multiplier and text representing it that are appropiate for
     the specified range"""

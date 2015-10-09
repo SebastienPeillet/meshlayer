@@ -10,7 +10,7 @@ from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat, QGLContext
 import numpy
 from math import log, ceil, exp
 
-from utilities import complete_filename
+from utilities import complete_filename, format_
 
 def roundUpSize(size):
     """return size roudup to the nearest power of 2"""
@@ -127,9 +127,6 @@ class ColorLegend(QGraphicsScene):
         """returns a QGraphicsItemGroup that contains legend items"""
         grp = QGraphicsItemGroup()
         values = self.values()
-        format_ = "%.2e"
-        if self.__maxValue < 10000 and self.__minValue > 0.01:
-            format_ = "%.1f"
 
         textHeight = QFontMetrics(QFont()).height()
         legendWidth = textHeight*20
@@ -146,8 +143,9 @@ class ColorLegend(QGraphicsScene):
         img = QGraphicsPixmapItem(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
         grp.addToGroup(img)
         img.setPos(barPosition)
+        fmt = format_(self.__minValue, self.__maxValue)
         for i, value in enumerate(values):
-            text = QGraphicsTextItem(format_%(value))
+            text = QGraphicsTextItem(fmt%(value))
             grp.addToGroup(text)
             text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
             line = QGraphicsLineItem(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
