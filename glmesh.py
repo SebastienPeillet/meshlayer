@@ -56,6 +56,7 @@ class ColorLegend(QGraphicsScene):
         """
         return """
             varying float value;
+            varying float w;
             varying vec3 normal;
             varying vec4 ecPos;
             uniform float transparency;
@@ -295,10 +296,39 @@ class GlMesh(QObject):
         self.__pixBuf = None
         self.__legend = legend
 
+        self.__colorPerElement = False
+
         #self.__previousLegend = legend
 
     #def setLegend(self, legend):
     #    self.__legend = legend
+
+    def setColorPerElement(self, flag):
+        if self.__colorPerElement == flag:
+            return # nothing to do
+        self.__colorPerElement = flag
+        if self.__colorPerElement:
+            # we duplicate vertices 
+            idx = self.__idx
+            self.__origVtx = self.__vtx
+            self.__vtx = numpy.concatenate((
+                    self.__origVtx[self.__idx[:,0]],
+                    self.__origVtx[self.__idx[:,1]],
+                    self.__origVtx[self.__idx[:,2]]))
+            self.__origIdx = self.__idx
+            nbElem = len(self.__idx)
+            self.__idx = numpy.reshape(
+                numpy.array([numpy.arange(nbElem), 
+                             numpy.arange(nbElem, 2*nbElem), 
+                             numpy.arange(2*nbElem, 3*nbElem)]), 
+                (3,-1)).transpose()
+        else:
+           self.__idx = self.__origIdx
+           self.__vtx = self.__origVtx
+
+
+    def colorPerElement():
+        return self.__colorPerElement
 
     def __resize(self, roundupImageSize):
         # QGLPixelBuffer size must be power of 2
@@ -315,6 +345,7 @@ class GlMesh(QObject):
         self.__pixBuf.bindToDynamicTexture(self.__pixBuf.generateDynamicTexture())
         vertex_shader = shaders.compileShader("""
             varying float value;
+            varying float w;
             varying vec3 normal;
             varying vec4 ecPos;
             void main()
@@ -322,6 +353,7 @@ class GlMesh(QObject):
                 ecPos = gl_ModelViewMatrix * gl_Vertex;
                 normal = normalize(gl_NormalMatrix * gl_Normal);
                 value = gl_MultiTexCoord0.st.x;
+                w = value > 0.0 ? 1.0 : 0.0;
                 gl_Position = ftransform();
             }
             """, GL_VERTEX_SHADER)
@@ -338,7 +370,8 @@ class GlMesh(QObject):
 
 
     def image(self, values, imageSize, center, mapUnitsPerPixel, rotation=0):
-        """Return the rendered image of a given size for values defined at each vertex.
+        """Return the rendered image of a given size for values defined at each vertex 
+        or at each element depending on setColorPerElement.
         Values are normalized using valueRange = (minValue, maxValue).
         transparency is in the range [0,1]"""
 
@@ -362,6 +395,8 @@ class GlMesh(QObject):
         val = numpy.require(values, numpy.float32) \
                 if not isinstance(values, numpy.ndarray)\
                 else values
+        if self.__colorPerElement:
+            val = numpy.concatenate((val,val,val))
 
         self.__pixBuf.makeCurrent()
 
@@ -370,6 +405,8 @@ class GlMesh(QObject):
         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
         glEnable(GL_TEXTURE_2D)
 
+        glShadeModel(GL_FLAT)
+        
         glClear(GL_COLOR_BUFFER_BIT)
         glLoadIdentity()
 
@@ -514,9 +551,11 @@ if __name__ == "__main__":
     mesh = GlMesh(((0,0,0),(1,0,0),(1,1,0),(1,2,0),(0,2,0),(0,1,0)),
             ((0,1,2),(0,2,5),(5,2,3),(5,3,4)), legend)
     img = mesh.image( 
+            (.01, .01, .5*33.01, 33, 33,  .5*33.01),
             QSize(800,600),
-            (-4, -3, 4, 3),
-            (.01, .01, .5*33.01, 33, 33,  .5*33.01))
+            (0,0),
+            (8.0/800, 6.0/600)
+            )
     img.save('/tmp/test_gl_mesh.png')
     img = QImage('/tmp/test_gl_mesh.png')
     rot = QTransform()
@@ -530,13 +569,26 @@ if __name__ == "__main__":
 
     legend.setLogScale(True)
     img = mesh.image( 
+            (.01, .01, .1, 33, 33, .1),
             QSize(800,600),
-            (-4, -3, 4, 3),
-            (.01, .01, .1, 33, 33, .1))
+            (0,0),
+            (8.0/800, 6.0/600)
+            )
     img.save('/tmp/test_gl_mesh_log.png')
 
     #legend.setMinValue(.01)
     #legend.setMaxValue(33000)
     legend.image().save("/tmp/test_gl_mesh_legend.png")
+
+    legend.setLogScale(False)
+    mesh.setColorPerElement(True)
+    img = mesh.image( 
+            (0, 10, 20, 30),
+            QSize(800,600),
+            (0,0),
+            (8.0/800, 6.0/600)
+            )
+    img.save('/tmp/test_gl_flat.png')
+
 
 

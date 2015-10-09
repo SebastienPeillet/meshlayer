@@ -20,15 +20,6 @@ class MeshDataProvider(QgsDataProvider):
         self.__didx = 0
         self.__dates = []
 
-    def setResultColumn(self, columnName):
-        self.__uri.setParam('resultColumn', columnName)
-        self.dataChanged.emit()
-
-    def resultColumn(self):
-        return self.__uri.param('resultColumn')\
-                if self.__uri.hasParam('resultColumn')\
-                else None
-
     def name(self):
         return MeshDataProvider.PROVIDER_KEY
 
@@ -67,8 +58,15 @@ class MeshDataProvider(QgsDataProvider):
     def date(self):
         return self.__didx
 
+    def valueAtElement(self):
+        return False
+
     def nodeValues(self):
         """return values at nodes"""
+        return numpy.empty((0,), dtype=numpy.float32)
+
+    def elementValues(self):
+        """return values at elements"""
         return numpy.empty((0,), dtype=numpy.float32)
 
     def dataSourceUri(self):
@@ -81,6 +79,7 @@ class MeshDataProvider(QgsDataProvider):
         element = node.toElement()
         self.__uri = QgsDataSourceURI(element.attribute("uri"))
         self.__didx = int(element.attribute("dateIndex"))
+        self.__valueAtElement = int(element.attribute("valueAtElement"))
         return True
 
     def writeXml(self, node, doc):
@@ -88,5 +87,6 @@ class MeshDataProvider(QgsDataProvider):
         element.setAttribute("name", self.name())
         element.setAttribute("uri", self.dataSourceUri())
         element.setAttribute("dateIndex", self.__didx)
+        element.setAttribute("valueAtElement", self.__valueAtElement)
         return True
 

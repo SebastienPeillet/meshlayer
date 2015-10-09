@@ -151,6 +151,7 @@ class MeshLayer(QgsPluginLayer):
         provider = node.namedItem("meshDataProvider").toElement()
         meshDataProvider = MeshDataProviderRegistry.instance().provider(
                 provider.attribute("name"), provider.attribute("uri"))
+        meshDataProvider.setColorPerElement
         if not meshDataProvider.readXml(node.namedItem("meshDataProvider")):
             return False
 
@@ -200,15 +201,17 @@ class MeshLayer(QgsPluginLayer):
         ext = rendererContext.extent()
         if transform:
             ext = transform.transform(ext)
+        self.__glMesh.setColorPerElement(self.__meshDataProvider.valueAtElement())
         self.__img = self.__glMesh.image(
-                self.__meshDataProvider.nodeValues(),
+                self.__meshDataProvider.elementValues() 
+                   if self.__meshDataProvider.valueAtElement() else
+                   self.__meshDataProvider.nodeValues(),
                 painter.window().size(),
                 (.5*(ext.xMinimum() + ext.xMaximum()), 
                  .5*(ext.yMinimum() + ext.yMaximum())),
                 (rendererContext.mapToPixel().mapUnitsPerPixel(), 
                  rendererContext.mapToPixel().mapUnitsPerPixel()),
-                rendererContext.mapToPixel().mapRotation()
-                )
+                rendererContext.mapToPixel().mapRotation())
         self.__imageChangedMutex.unlock()
         self.__imageChangedCondition.wakeOne();
 
