@@ -21,18 +21,25 @@ import traceback
 from glmesh import GlMesh, ColorLegend
 
 from meshdataproviderregistry import MeshDataProviderRegistry
+from meshlayerpropertydialog import MeshLayerPropertyDialog
 
 from utilities import linemerge
 
 class MeshLayerType(QgsPluginLayerType):
     def __init__(self):
         QgsPluginLayerType.__init__(self, MeshLayer.LAYER_TYPE)
+        self.__dlg = None
 
     def createLayer(self):
         return MeshLayer()
 
         # indicate that we have shown the properties dialog
         return True
+
+    def showLayerProperties(self, layer):
+        self.__dlg = MeshLayerPropertyDialog(layer)
+        return True
+
 
 class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
     def __init__(self, nodeLayer, parent, legend):

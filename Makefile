@@ -1,7 +1,8 @@
 FILES=\
     metadata.txt\
     LICENSE \
-    images
+    images \
+    meshlayerproperties.ui
 
 package: ${FILES} $(wildcard *.py)
 	rm -rf meshlayer
