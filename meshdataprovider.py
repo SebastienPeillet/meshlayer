@@ -79,7 +79,6 @@ class MeshDataProvider(QgsDataProvider):
         element = node.toElement()
         self.__uri = QgsDataSourceURI(element.attribute("uri"))
         self.__didx = int(element.attribute("dateIndex"))
-        self.__valueAtElement = int(element.attribute("valueAtElement"))
         return True
 
     def writeXml(self, node, doc):
@@ -87,6 +86,5 @@ class MeshDataProvider(QgsDataProvider):
         element.setAttribute("name", self.name())
         element.setAttribute("uri", self.dataSourceUri())
         element.setAttribute("dateIndex", self.__didx)
-        element.setAttribute("valueAtElement", self.__valueAtElement)
         return True
 

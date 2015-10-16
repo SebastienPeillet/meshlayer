@@ -34,6 +34,9 @@ class MeshLayerPropertyDialog(QDialog):
             emitter(fil)()
             action.triggered.connect(emitter(fil))
             menu.addAction(action)
+
+        self.colorButton.setIcon(QIcon(layer.colorLegend().colorRamp()))
+        
         self.__colorRampChanged.connect(layer.colorLegend().setColorRamp)
         self.minValue.textChanged.connect(layer.colorLegend().setMinValue)
         self.maxValue.textChanged.connect(layer.colorLegend().setMaxValue)

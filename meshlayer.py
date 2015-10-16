@@ -158,7 +158,6 @@ class MeshLayer(QgsPluginLayer):
         provider = node.namedItem("meshDataProvider").toElement()
         meshDataProvider = MeshDataProviderRegistry.instance().provider(
                 provider.attribute("name"), provider.attribute("uri"))
-        meshDataProvider.setColorPerElement
         if not meshDataProvider.readXml(node.namedItem("meshDataProvider")):
             return False
 
