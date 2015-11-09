@@ -189,6 +189,7 @@ class MeshLayer(QgsPluginLayer):
         return self.__meshDataProvider
 
     def __drawInMainThread(self):
+        self.__imageChangedMutex.lock()
         rendererContext = self.__ctx
 
         transform = rendererContext.coordinateTransform()
@@ -203,7 +204,6 @@ class MeshLayer(QgsPluginLayer):
             self.__glMesh.resetCoord(vtx)
 
         painter = rendererContext.painter()
-        self.__imageChangedMutex.lock()
         ext = rendererContext.extent()
         if transform:
             ext = transform.transform(ext)
@@ -219,21 +219,29 @@ class MeshLayer(QgsPluginLayer):
                  rendererContext.mapToPixel().mapUnitsPerPixel()),
                 rendererContext.mapToPixel().mapRotation())
         self.__imageChangedMutex.unlock()
-        self.__imageChangedCondition.wakeOne();
+        self.__imageChangedCondition.wakeAll();
 
     def draw(self, rendererContext):
         """This function is called by the rendering thread. 
         GlMesh must be created in the main thread."""
         try:
             painter = rendererContext.painter()
-            self.__imageChangedMutex.lock()
-            self.__ctx = rendererContext
-            self.__img = None
-            self.__imageChangeRequested.emit()
-            while not self.__img:
-                self.__imageChangedCondition.wait(self.__imageChangedMutex);
-            self.__imageChangedMutex.unlock()
-            painter.drawImage(painter.window(), self.__img)
+            if QApplication.instance().thread() != QThread.currentThread():
+                self.__imageChangedMutex.lock()
+                self.__ctx = rendererContext
+                self.__img = None
+                self.__imageChangeRequested.emit()
+                while not self.__img:
+                    self.__imageChangedCondition.wait(self.__imageChangedMutex);
+                painter.drawImage(painter.window(), self.__img)
+                self.__imageChangedMutex.unlock()
+            else:
+                self.__imageChangedMutex.lock()
+                self.__ctx = rendererContext
+                self.__imageChangedMutex.unlock()
+                self.__drawInMainThread()
+                painter.drawImage(painter.window(), self.__img)
+
             return True
         except Exception as e:
             # since we are in a thread, we must re-raise the exception
