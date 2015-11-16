@@ -42,6 +42,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.maxValue.textChanged.connect(layer.colorLegend().setMaxValue)
         self.transparencySlider.valueChanged.connect(
              layer.colorLegend().setTransparencyPercent)
+        
         def updateMinMax():
             min_ = layer.dataProvider().minValue()
             max_ = layer.dataProvider().maxValue()
@@ -51,3 +52,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.updateMinMaxButton.clicked.connect(updateMinMax)
         self.show()
 
+        self.logCheckBox.setChecked(layer.colorLegend().hasLogScale())
+        def logOnOff(flag):
+            layer.colorLegend().setLogScale(self.logCheckBox.isChecked())
+        self.logCheckBox.toggled.connect(logOnOff)
