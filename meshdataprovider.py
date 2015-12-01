@@ -13,6 +13,7 @@ class MeshDataProvider(QgsDataProvider):
     PROVIDER_KEY = "mesh_provider"
 
     dataChanged = pyqtSignal()
+    xmlLoaded = pyqtSignal()
 
     def __init__(self, uri):
         self.__uri = QgsDataSourceURI(uri)
@@ -79,6 +80,7 @@ class MeshDataProvider(QgsDataProvider):
         element = node.toElement()
         self.__uri = QgsDataSourceURI(element.attribute("uri"))
         self.__didx = int(element.attribute("dateIndex"))
+        self.xmlLoaded.emit()
         return True
 
     def writeXml(self, node, doc):
