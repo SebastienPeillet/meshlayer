@@ -42,7 +42,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.maxValue.textChanged.connect(layer.colorLegend().setMaxValue)
         self.transparencySlider.valueChanged.connect(
              layer.colorLegend().setTransparencyPercent)
-        
+
         def updateMinMax():
             min_ = layer.dataProvider().minValue()
             max_ = layer.dataProvider().maxValue()
@@ -56,3 +56,83 @@ class MeshLayerPropertyDialog(QDialog):
         def logOnOff(flag):
             layer.colorLegend().setLogScale(self.logCheckBox.isChecked())
         self.logCheckBox.toggled.connect(logOnOff)
+
+        def updateGraduation(item=None):
+            classes = []
+            for row in range(self.tableWidget.rowCount()):
+                min_, max_ = None, None
+                if self.tableWidget.item(row, 1) and self.tableWidget.item(row, 2):
+                    try:
+                        min_ = float(self.tableWidget.item(row, 1).text())
+                        self.tableWidget.item(row, 1).setBackground(QBrush(Qt.white))
+                    except ValueError:
+                        self.tableWidget.item(row, 1).setBackground(QBrush(Qt.red))
+                    try:
+                        max_ = float(self.tableWidget.item(row, 2).text())
+                        self.tableWidget.item(row, 2).setBackground(QBrush(Qt.white))
+                    except ValueError:
+                        self.tableWidget.item(row, 2).setBackground(QBrush(Qt.red))
+                if min_ and max_:
+                    classes.append((self.tableWidget.item(row, 0).background().color(), min_, max_))
+
+            layer.colorLegend().setGraduation(classes)
+
+        def addGraduation(flag=None):
+            idx = self.tableWidget.rowCount()
+            self.tableWidget.setRowCount(idx+1)
+            colorItem = QTableWidgetItem()
+            colorItem.setFlags(colorItem.flags() & ~Qt.ItemIsSelectable & ~Qt.ItemIsEditable)
+            colorItem.setBackground(QBrush(Qt.red))
+            self.tableWidget.setItem(idx, 0, colorItem)
+            min_ = layer.dataProvider().minValue()
+            max_ = layer.dataProvider().maxValue()
+            fmt = format_(min_, max_)
+            self.tableWidget.setItem(idx, 1, QTableWidgetItem(fmt%min_))
+            self.tableWidget.setItem(idx, 2, QTableWidgetItem(fmt%max_))
+
+        def editColor(row, colum):
+            if colum != 0:
+                return
+
+            item = self.tableWidget.item(row, 0)
+            color = QColorDialog.getColor(item.background().color(), self) 
+            if color.isValid(): # false on user cancel
+                item.setBackground(QBrush(color)) 
+
+        def removeGraduation(flag=None):
+            while len(self.tableWidget.selectedRanges()):
+                for range_ in self.tableWidget.selectedRanges():
+                    self.tableWidget.removeRow(range_.bottomRow())
+            updateGraduation()
+
+        if layer.colorLegend().graduated():
+            self.symboTypeComboBox.setCurrentIndex(1)
+
+        if layer.colorLegend().graduation():
+            graduation = layer.colorLegend().graduation()
+            min_, max_ = (min([c[1] for c in graduation]), max([c[2] for c in graduation])) if len(graduation) else (0,0)
+            fmt = format_(min_, max_)
+            for class_ in graduation:
+                idx = self.tableWidget.rowCount()
+                self.tableWidget.setRowCount(idx+1)
+                colorItem = QTableWidgetItem()
+                colorItem.setFlags(colorItem.flags() & ~Qt.ItemIsSelectable & ~Qt.ItemIsEditable)
+                colorItem.setBackground(QBrush(class_[0]))
+                self.tableWidget.setItem(idx, 0, colorItem)
+                self.tableWidget.setItem(idx, 1, QTableWidgetItem(fmt%class_[1]))
+                self.tableWidget.setItem(idx, 2, QTableWidgetItem(fmt%class_[2]))
+
+        self.plusButton.clicked.connect(addGraduation)
+        self.minusButton.clicked.connect(removeGraduation)
+        self.tableWidget.cellDoubleClicked.connect(editColor)
+        self.tableWidget.itemChanged.connect(updateGraduation)
+        self.tableWidget.itemChanged.connect(updateGraduation)
+
+        def setSymbology(idx):
+            if idx==0:
+                layer.colorLegend().toggleGraduation(False)
+            else:
+                layer.colorLegend().toggleGraduation(True)
+
+        self.symboTypeComboBox.currentIndexChanged.connect(setSymbology)
+        

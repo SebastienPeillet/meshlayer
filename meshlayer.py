@@ -64,6 +64,7 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
         context.setScaleFactor( settings.dpi() / 25.4 )
         context.setRendererScale( settings.mapScale() )
         context.setMapToPixel( QgsMapToPixel( 1 / ( settings.mmPerMapUnit() * context.scaleFactor() ) ) )
+
         sz = self.__legend.sceneRect().size()
         aspect = sz.width() / sz.height()
         h = textHeight*16

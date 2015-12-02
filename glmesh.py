@@ -25,6 +25,19 @@ class ColorLegend(QGraphicsScene):
     """
 
     symbologyChanged = pyqtSignal()
+
+    __pixelColorContinuous = """
+        vec4 pixelColor(float value)
+        {
+            float normalizedValue = clamp(
+                logscale
+                ? (log(value)-log(minValue))/(log(maxValue)-log(minValue))
+                : (value-minValue)/(maxValue-minValue)
+                , 0.f, 1.f);
+            return texture2D(tex, vec2(.5f, normalizedValue));
+        }
+        """
+
     
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
@@ -37,12 +50,40 @@ class ColorLegend(QGraphicsScene):
         self.__colorRamp = QImage(self.__colorRampFile)
         self.__units = ""
         self.__scale = "linear"
+        self.__pixelColor = ColorLegend.__pixelColorContinuous
+        self.__graduation = []
+        self.__graduated = False
 
     @staticmethod
     def availableRamps():
         return {u"Bleu - Rouge": complete_filename('images/ramp_blue_red_continuous.svg'),
                 u"Bleu - Mauve": complete_filename('images/ramp_blue_purple_discrete.png'),
                 u"Brûlé": complete_filename('images/ramp_burn_continuous.svg')}
+
+    def graduated(self):
+        return self.__graduated
+
+    def toggleGraduation(self, flag):
+        self.__graduated = bool(flag)
+        if self.__graduated:
+            self.__pixelColor = "vec4 pixelColor(float value)\n{\n"
+
+            for c, min_, max_ in self.__graduation:
+                self.__pixelColor += "    if (float(%g) < value && value <= float(%g)) return vec4(%g, %g, %g, 1.);\n"%(
+                        min_, max_, c.redF(), c.greenF(), c.blueF()) 
+            self.__pixelColor += "    return vec4(0., 0., 0., 0.);\n"
+            self.__pixelColor += "}\n";
+        else:
+            self.__pixelColor = ColorLegend.__pixelColorContinuous
+        self.symbologyChanged.emit()
+
+    def setGraduation(self, graduation):
+        """graduation is a list of tuple (color, min, max) the alpha componant is not considered"""
+        self.__graduation = graduation
+        self.toggleGraduation(bool(self.__graduation))
+
+    def graduation(self):
+        return self.__graduation
      
     def _fragmentShader(self):
         """Return a string containing the definition of the GLSL pixel shader 
@@ -65,15 +106,7 @@ class ColorLegend(QGraphicsScene):
             uniform bool logscale;
             uniform bool withNormals;
             uniform sampler2D tex;
-            vec4 pixelColor(float value)
-            {
-                float normalizedValue = clamp(
-                    logscale
-                    ? (log(value)-log(minValue))/(log(maxValue)-log(minValue))
-                    : (value-minValue)/(maxValue-minValue)
-                    , 0.f, 1.f);
-                return texture2D(tex, vec2(.5f, normalizedValue));
-            }
+            """+self.__pixelColor+"""
             void main()
             {
                 vec3 lightDir = vec3(gl_LightSource[0].position-ecPos);
@@ -103,7 +136,9 @@ class ColorLegend(QGraphicsScene):
     def image(self):
         """Return an image representing the legend"""
         self.__refresh()
+
         sz = self.sceneRect().size().toSize()
+        print "legend image ", sz.width(), sz.height()
         img = QImage(
                 sz.width(), 
                 sz.height(), 
@@ -121,6 +156,7 @@ class ColorLegend(QGraphicsScene):
         """refresh the legend"""
         self.clear()
         grp = self.createItems()
+        self.setSceneRect(grp.boundingRect())
         for item in grp.childItems():
             self.addItem(item);
 
@@ -132,25 +168,42 @@ class ColorLegend(QGraphicsScene):
         textHeight = QFontMetrics(QFont()).height()
         legendWidth = textHeight*20
         barWidth = textHeight
-        barHeight = textHeight*len(values)*1.2
         barPosition = QPoint(0, 1.75*textHeight)
         headerPosition = QPoint(0,0)
         bottomSpace = 15
-        tickSpacing = float(barHeight)/(len(values)-1)
-
         text = QGraphicsTextItem(self.__title+" ["+self.__units+"]")
         grp.addToGroup(text)
         text.setPos(headerPosition)
-        img = QGraphicsPixmapItem(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
-        grp.addToGroup(img)
-        img.setPos(barPosition)
-        fmt = format_(self.__minValue, self.__maxValue)
-        for i, value in enumerate(values):
-            text = QGraphicsTextItem(fmt%(value))
-            grp.addToGroup(text)
-            text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
-            line = QGraphicsLineItem(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
-            grp.addToGroup(line)
+
+        if self.graduated():
+            min_, max_ = (min([c[1] for c in self.__graduation]), max([c[2] for c in self.__graduation]))\
+                    if len(self.__graduation) else (0,0)
+            fmt = format_(min_, max_)
+            for i, (color, min_, max_) in enumerate(self.__graduation):
+                pix = QPixmap(barWidth, textHeight*.8)
+                pix.fill(color)
+                img = QGraphicsPixmapItem(pix)
+                img.setPos(barPosition+QPoint(0, int(i*textHeight)))
+                grp.addToGroup(img)
+
+                text = QGraphicsTextItem(fmt%(min_)+u" — "+fmt%(max_))
+                text.setPos(barPosition+QPoint(barWidth+5, int((i-.25)*textHeight)))
+                grp.addToGroup(text)
+
+        else:
+            barHeight = textHeight*len(values)*1.2
+            tickSpacing = float(barHeight)/(len(values)-1)
+
+            img = QGraphicsPixmapItem(QPixmap.fromImage(self.__colorRamp.scaled(barWidth, barHeight)))
+            grp.addToGroup(img)
+            img.setPos(barPosition)
+            fmt = format_(self.__minValue, self.__maxValue)
+            for i, value in enumerate(values):
+                text = QGraphicsTextItem(fmt%(value))
+                grp.addToGroup(text)
+                text.setPos(barPosition+QPoint(barWidth+5, int(i*tickSpacing) - .75*textHeight))
+                line = QGraphicsLineItem(QLineF(barPosition+QPoint(barWidth, int(i*tickSpacing)), barPosition+QPoint(barWidth+4, int(i*tickSpacing))))
+                grp.addToGroup(line)
         return grp
 
     def setLogScale(self, trueOrFalse=True):
@@ -269,6 +322,12 @@ class ColorLegend(QGraphicsScene):
         self.setColorRamp(element.attribute("colorRampFile"))
         self.setUnits(element.attribute("units"))
         self.setLogScale(element.attribute("scale")=="log")
+        graduation = []
+        for c, min_, max_ in zip(*[iter(element.attribute("graduation").split())]*3):
+            graduation.append((QColor(c), float(min_), float(max_)))
+        self.setGraduation(graduation)
+        self.toggleGraduation(bool(int(element.attribute("graduated"))))
+        
         self.__refresh()
         return True
 
@@ -281,6 +340,8 @@ class ColorLegend(QGraphicsScene):
         element.setAttribute("colorRampFile", self.__colorRampFile)
         element.setAttribute("units", self.__units)
         element.setAttribute("scale", self.__scale)
+        element.setAttribute("graduated", self.__graduated)
+        element.setAttribute("graduation", " ".join([g[0].name()+" "+str(g[1])+" "+str(g[2]) for g in self.__graduation]))
         return True
 
 class GlMesh(QObject):
@@ -296,12 +357,17 @@ class GlMesh(QObject):
         self.__pixBuf = None
         self.__legend = legend
 
+        self.__legend.symbologyChanged.connect(self.__recompileNeeded)
+
         self.__colorPerElement = False
+        self.__recompileShader = False
 
         #self.__previousLegend = legend
 
     #def setLegend(self, legend):
     #    self.__legend = legend
+    def __recompileNeeded(self):
+        self.__recompileShader = True
 
     def setColorPerElement(self, flag):
         if self.__colorPerElement == flag:
@@ -327,22 +393,10 @@ class GlMesh(QObject):
            self.__vtx = self.__origVtx
 
 
-    def colorPerElement():
+    def colorPerElement(self):
         return self.__colorPerElement
 
-    def __resize(self, roundupImageSize):
-        # QGLPixelBuffer size must be power of 2
-        assert roundupImageSize == roundUpSize(roundupImageSize)
-
-        # force alpha format, it should be the default, 
-        # but isn't all the time (uninitialized)
-        fmt = QGLFormat()
-        fmt.setAlpha(True)
-
-        self.__pixBuf = QGLPixelBuffer(roundupImageSize, fmt)
-        assert self.__pixBuf.format().alpha()
-        self.__pixBuf.makeCurrent()
-        self.__pixBuf.bindToDynamicTexture(self.__pixBuf.generateDynamicTexture())
+    def __compileShaders(self):
         vertex_shader = shaders.compileShader("""
             varying float value;
             varying float w;
@@ -363,6 +417,22 @@ class GlMesh(QObject):
 
         self.__shaders = shaders.compileProgram(vertex_shader, fragment_shader)
         self.__legend._setUniformsLocation(self.__shaders)
+        self.__recompileShader = False
+
+    def __resize(self, roundupImageSize):
+        # QGLPixelBuffer size must be power of 2
+        assert roundupImageSize == roundUpSize(roundupImageSize)
+
+        # force alpha format, it should be the default, 
+        # but isn't all the time (uninitialized)
+        fmt = QGLFormat()
+        fmt.setAlpha(True)
+
+        self.__pixBuf = QGLPixelBuffer(roundupImageSize, fmt)
+        assert self.__pixBuf.format().alpha()
+        self.__pixBuf.makeCurrent()
+        self.__pixBuf.bindToDynamicTexture(self.__pixBuf.generateDynamicTexture())
+        self.__compileShaders()
         self.__pixBuf.doneCurrent()
     
     def resetCoord(self, vtx):
@@ -391,6 +461,7 @@ class GlMesh(QObject):
             # we need to call the main thread for a change of the
             # pixel buffer and wait for the change to happen
             self.__resize(roundupSz)
+        
 
         val = numpy.require(values, numpy.float32) \
                 if not isinstance(values, numpy.ndarray)\
@@ -399,6 +470,9 @@ class GlMesh(QObject):
             val = numpy.concatenate((val,val,val))
 
         self.__pixBuf.makeCurrent()
+
+        if self.__recompileShader:
+            self.__compileShaders()
 
         glClearColor(0., 0., 0., 0.)
         glEnableClientState(GL_VERTEX_ARRAY)
