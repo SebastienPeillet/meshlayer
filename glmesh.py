@@ -138,7 +138,6 @@ class ColorLegend(QGraphicsScene):
         self.__refresh()
 
         sz = self.sceneRect().size().toSize()
-        print "legend image ", sz.width(), sz.height()
         img = QImage(
                 sz.width(), 
                 sz.height(), 
@@ -156,7 +155,7 @@ class ColorLegend(QGraphicsScene):
         """refresh the legend"""
         self.clear()
         grp = self.createItems()
-        self.setSceneRect(grp.boundingRect())
+        self.setSceneRect(grp.boundingRect().adjusted(0,0,100,20))
         for item in grp.childItems():
             self.addItem(item);
 
