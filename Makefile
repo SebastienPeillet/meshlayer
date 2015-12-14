@@ -1,10 +1,9 @@
 FILES=\
     metadata.txt\
     LICENSE \
-    images \
-    meshlayerproperties.ui
+    images
 
-package: ${FILES} $(wildcard *.py)
+package: ${FILES} $(wildcard *.py) $(wildcard *.ui)
 	rm -rf meshlayer
 	mkdir meshlayer
 	cp -r $^ meshlayer/

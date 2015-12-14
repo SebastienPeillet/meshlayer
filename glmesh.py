@@ -122,7 +122,7 @@ class ColorLegend(QGraphicsScene):
             """
 
     def values(self, nbValues=7):
-        """Return list of numerical values in legend"""
+        """Return list of numerical values at 'equal' or 'logequal' intervals """
         values = []
         for i in range(nbValues):
             alpha = 1. - float(i)/(nbValues-1)
@@ -162,7 +162,6 @@ class ColorLegend(QGraphicsScene):
     def createItems(self):
         """returns a QGraphicsItemGroup that contains legend items"""
         grp = QGraphicsItemGroup()
-        values = self.values()
 
         textHeight = QFontMetrics(QFont()).height()
         legendWidth = textHeight*20
@@ -190,6 +189,8 @@ class ColorLegend(QGraphicsScene):
                 grp.addToGroup(text)
 
         else:
+            values = self.values()
+
             barHeight = textHeight*len(values)*1.2
             tickSpacing = float(barHeight)/(len(values)-1)
 

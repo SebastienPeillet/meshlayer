@@ -5,7 +5,7 @@ from PyQt4.QtGui import *
 from PyQt4 import uic
 
 from utilities import format_, complete_filename
-from meshlayer import ColorLegend
+from glmesh import ColorLegend
 
 import numpy
 
