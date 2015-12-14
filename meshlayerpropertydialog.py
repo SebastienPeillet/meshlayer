@@ -6,14 +6,19 @@ from PyQt4 import uic
 
 from utilities import format_, complete_filename
 from glmesh import ColorLegend
+from math import exp, log
 
 import numpy
 
 class MeshLayerPropertyDialog(QDialog):
     __colorRampChanged = pyqtSignal(str)
+    __classColorChanged = pyqtSignal(str)
+    DEFAULT_NB_OF_CLASSES = 10
+
     def __init__(self, layer):
         super(MeshLayerPropertyDialog, self).__init__()
         uic.loadUi(complete_filename('meshlayerproperties.ui'), self)
+        self.nbClassesSpinBox.setValue(MeshLayerPropertyDialog.DEFAULT_NB_OF_CLASSES)
 
         fmt = format_(layer.colorLegend().minValue(), layer.colorLegend().maxValue())
         self.minValue.setText(fmt%layer.colorLegend().minValue())
@@ -27,7 +32,6 @@ class MeshLayerPropertyDialog(QDialog):
             action = QAction(QIcon(QPixmap.fromImage(img)), name, self.colorButton)
             def emitter(f):
                 def func(flag=None): 
-                    self.__colorRamp = f
                     self.colorButton.setIcon(QIcon(f))
                     self.__colorRampChanged.emit(f)
                 return func
@@ -112,8 +116,8 @@ class MeshLayerPropertyDialog(QDialog):
         if layer.colorLegend().graduated():
             self.symboTypeComboBox.setCurrentIndex(1)
 
-        if layer.colorLegend().graduation():
-            graduation = layer.colorLegend().graduation()
+        def setFromGraduation(graduation):
+            self.tableWidget.setRowCount(0)
             min_, max_ = (min([c[1] for c in graduation]), max([c[2] for c in graduation])) if len(graduation) else (0,0)
             fmt = format_(min_, max_)
             for class_ in graduation:
@@ -125,6 +129,9 @@ class MeshLayerPropertyDialog(QDialog):
                 self.tableWidget.setItem(idx, 0, colorItem)
                 self.tableWidget.setItem(idx, 1, QTableWidgetItem(fmt%class_[1]))
                 self.tableWidget.setItem(idx, 2, QTableWidgetItem(fmt%class_[2]))
+
+        if layer.colorLegend().graduation():
+            setFromGraduation(layer.colorLegend().graduation())
 
         self.plusButton.clicked.connect(addGraduation)
         self.minusButton.clicked.connect(removeGraduation)
@@ -139,4 +146,88 @@ class MeshLayerPropertyDialog(QDialog):
                 layer.colorLegend().toggleGraduation(True)
 
         self.symboTypeComboBox.currentIndexChanged.connect(setSymbology)
+
+
+        def changeClassColors(f):
+            img = QImage(f)
+            nbClass = self.tableWidget.rowCount()
+            dh = img.size().height()/(nbClass-1) if nbClass>1 else 0
+            x = img.size().width()/2
+            for row in range(nbClass):
+                print img.pixel(x, dh*row)
+                self.tableWidget.item(row, 0).setBackground(QBrush(QColor(img.pixel(x, dh*row))))
+            updateGraduation()
+
+        def classify(flag=None):
+            self.tableWidget.setRowCount(0)
+            nbClass = self.nbClassesSpinBox.value()
+            values = layer.colorLegend().values(nbClass+1)
+            fmt = format_(min(values), max(values))
+            for i in range(nbClass):
+                self.tableWidget.setRowCount(self.tableWidget.rowCount()+1)
+                colorItem = QTableWidgetItem()
+                colorItem.setFlags(colorItem.flags() & ~Qt.ItemIsSelectable & ~Qt.ItemIsEditable)
+                colorItem.setBackground(QBrush(Qt.red))
+                self.tableWidget.setItem(i, 0, colorItem)
+                self.tableWidget.setItem(i, 1, QTableWidgetItem(fmt%values[i+1]))
+                self.tableWidget.setItem(i, 2, QTableWidgetItem(fmt%values[i]))
+            changeClassColors(self.__classColor)
+
+
+        self.classifyButton.clicked.connect(classify)
+
+
+        classMenu = QMenu(self.classColorButton)
+        self.classColorButton.setMenu(classMenu)
+        self.__classColor = None
+        firstAction = None
+        for name, fil in ColorLegend.availableRamps().iteritems():
+            if fil[-14:] != 'continuous.svg':
+                continue
+            print "adding color", fil
+            img = QImage(fil).scaled(QSize(24,24))
+            action = QAction(QIcon(QPixmap.fromImage(img)), name, self.classColorButton)
+            def emitter(f):
+                def func(flag=None): 
+                    img = QImage(f).scaled(QSize(24,24))
+                    self.classColorButton.setIcon(QIcon(QPixmap.fromImage(QImage(f).scaled(QSize(24,24)))))
+                    self.__classColor = f
+                    self.__classColorChanged.emit(f)
+                return func
+            emitter(fil)()
+            action.triggered.connect(emitter(fil))
+            if not firstAction:
+                firstAction = action
+                self.__classColor = fil
+                self.classColorButton.setIcon(QIcon(QPixmap.fromImage(QImage(fil).scaled(QSize(24,24)))))
+
+            classMenu.addAction(action)
+
+        self.classColorButton.setArrowType(Qt.NoArrow)
+        self.__classColorChanged.connect(changeClassColors)
+
+        def saveClasses(flag=None):
+           fileName = QFileDialog.getSaveFileName(None, u"Color scale", "", "Text file (*.txt)") 
+           if not fileName:
+               return #cancelled
+           with open(fileName, 'w') as fil:
+               for color, min_, max_ in layer.colorLegend().graduation():
+                   fil.write("%s %s %s\n"%(color.name(), str(min_), str(max_)))
         
+        self.saveButton.clicked.connect(saveClasses)
+
+        def loadClasses(flag=None):
+            fileName = QFileDialog.getOpenFileName(None, u"Color scale", "", "Text file (*.txt)") 
+            if not fileName:
+                return #cancelled
+            graduation = []
+            with open(fileName) as fil:
+                for line in fil:
+                    spl = line.split()
+                    graduation.append((QColor(spl[0]), float(spl[1]), float(spl[2])))
+            setFromGraduation(graduation)
+            updateGraduation()
+
+        self.loadButton.clicked.connect(loadClasses)
+
+
