@@ -43,6 +43,10 @@ class MeshLayerPropertyDialog(QDialog):
         self.transparencySlider.valueChanged.connect(
              layer.colorLegend().setTransparencyPercent)
 
+        floatValidator = QDoubleValidator()
+        self.minValue.setValidator(floatValidator)
+        self.maxValue.setValidator(floatValidator)
+
         def updateMinMax():
             min_ = layer.dataProvider().minValue()
             max_ = layer.dataProvider().maxValue()
