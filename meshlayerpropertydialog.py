@@ -8,6 +8,8 @@ from utilities import format_, complete_filename
 from glmesh import ColorLegend
 from math import exp, log
 
+from qgis.core import *
+
 import numpy
 
 class MeshLayerPropertyDialog(QDialog):
@@ -151,10 +153,9 @@ class MeshLayerPropertyDialog(QDialog):
         def changeClassColors(f):
             img = QImage(f)
             nbClass = self.tableWidget.rowCount()
-            dh = img.size().height()/(nbClass-1) if nbClass>1 else 0
+            dh = (img.size().height()-1)/(nbClass-1) if nbClass>1 else 0
             x = img.size().width()/2
             for row in range(nbClass):
-                print img.pixel(x, dh*row)
                 self.tableWidget.item(row, 0).setBackground(QBrush(QColor(img.pixel(x, dh*row))))
             updateGraduation()
 
@@ -184,7 +185,6 @@ class MeshLayerPropertyDialog(QDialog):
         for name, fil in ColorLegend.availableRamps().iteritems():
             if fil[-14:] != 'continuous.svg':
                 continue
-            print "adding color", fil
             img = QImage(fil).scaled(QSize(24,24))
             action = QAction(QIcon(QPixmap.fromImage(img)), name, self.classColorButton)
             def emitter(f):
@@ -207,7 +207,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.__classColorChanged.connect(changeClassColors)
 
         def saveClasses(flag=None):
-           fileName = QFileDialog.getSaveFileName(None, u"Color scale", "", "Text file (*.txt)") 
+           fileName = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)") 
            if not fileName:
                return #cancelled
            with open(fileName, 'w') as fil:
@@ -217,7 +217,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.saveButton.clicked.connect(saveClasses)
 
         def loadClasses(flag=None):
-            fileName = QFileDialog.getOpenFileName(None, u"Color scale", "", "Text file (*.txt)") 
+            fileName = QFileDialog.getOpenFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)") 
             if not fileName:
                 return #cancelled
             graduation = []
