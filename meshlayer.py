@@ -229,9 +229,11 @@ class MeshLayer(QgsPluginLayer):
             if QApplication.instance().thread() != QThread.currentThread():
                 self.__imageChangedMutex.lock()
                 self.__transform = rendererContext.coordinateTransform()
-                self.__windowSize = rendererContext.painter().window().size()
                 self.__ext = rendererContext.extent()
                 self.__mapToPixel = rendererContext.mapToPixel()
+                self.__windowSize = QSize(
+                        int((self.__ext.xMaximum()-self.__ext.xMinimum())/self.__mapToPixel.mapUnitsPerPixel()), 
+                        int((self.__ext.yMaximum()-self.__ext.yMinimum())/self.__mapToPixel.mapUnitsPerPixel())) 
                 self.__img = None
                 self.__imageChangedMutex.unlock()
                 self.__imageChangeRequested.emit()
@@ -239,16 +241,18 @@ class MeshLayer(QgsPluginLayer):
                     time.sleep(.001) # active wait to avoid deadlocking if envent loop is stopped
                                      # this happens when a render job is cancellled
                 if not rendererContext.renderingStopped():
-                    painter.drawImage(painter.window(), self.__img)
+                    painter.drawImage(0,0, self.__img)
             else:
                 self.__imageChangedMutex.lock()
                 self.__transform = rendererContext.coordinateTransform()
-                self.__windowSize = rendererContext.painter().window().size()
                 self.__ext = rendererContext.extent()
                 self.__mapToPixel = rendererContext.mapToPixel()
+                self.__windowSize = QSize(
+                        int((self.__ext.xMaximum()-self.__ext.xMinimum())/self.__mapToPixel.mapUnitsPerPixel()), 
+                        int((self.__ext.yMaximum()-self.__ext.yMinimum())/self.__mapToPixel.mapUnitsPerPixel())) 
                 self.__imageChangedMutex.unlock()
                 self.__drawInMainThread()
-                painter.drawImage(painter.window(), self.__img)
+                painter.drawImage(0, 0, self.__img)
 
             return True
         except Exception as e:
