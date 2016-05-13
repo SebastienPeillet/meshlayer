@@ -3,12 +3,11 @@
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 
-from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat
+from qgis.core import *
 
+from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-
-from qgis.core import *
 
 import numpy
 from math import pow, log, ceil
@@ -19,6 +18,7 @@ import time
 import traceback
 
 from glmesh import GlMesh, ColorLegend
+from opengl_layer import OpenGlLayer
 
 from meshdataproviderregistry import MeshDataProviderRegistry
 from meshlayerpropertydialog import MeshLayerPropertyDialog
@@ -95,34 +95,19 @@ class MeshLayerLegend(QgsDefaultPluginLayerLegend):
         self.nodes = [node]
         return self.nodes
 
-class MeshLayer(QgsPluginLayer):
+class MeshLayer(OpenGlLayer):
+    """This class must be instanciated in the main thread"""
 
     LAYER_TYPE="mesh_layer"
-
-    __msg = pyqtSignal(str)
-    __drawException = pyqtSignal(str)
-    __imageChangeRequested = pyqtSignal()
-
-    def __print(self, msg):
-        print msg
-
-    def __raise(self, err):
-        raise Exception(err)
 
     def __init__(self, uri=None, name=None, providerKey=None):
         """optional parameters are here only in the case the layer is created from
         .gqs file, without them the layer is invalid"""
-        QgsPluginLayer.__init__(self, MeshLayer.LAYER_TYPE, name)
+        OpenGlLayer.__init__(self, MeshLayer.LAYER_TYPE, name)
         self.__meshDataProvider = None
         self.__legend = None
-        self.__imageChangedMutex = QMutex()
-        self.__imageChangeRequested.connect(self.__drawInMainThread)
-        self.__img = None
-
         if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
-        self.__drawException.connect(self.__raise)
-        self.__msg.connect(self.__print)
         self.__destCRS = None
 
     def setColorLegend(self, legend):
@@ -144,6 +129,7 @@ class MeshLayer(QgsPluginLayer):
         self.__legend = ColorLegend()
         self.__legend.setParent(self)
         self.__legend.symbologyChanged.connect(self.__symbologyChanged)
+        assert QApplication.instance().thread() == QThread.currentThread()
         self.__glMesh = GlMesh(
                 meshDataProvider.nodeCoord(), 
                 meshDataProvider.triangles(),
@@ -193,72 +179,37 @@ class MeshLayer(QgsPluginLayer):
     def dataProvider(self):
         return self.__meshDataProvider
 
-    def __drawInMainThread(self):
-        self.__imageChangedMutex.lock()
+    def image(self, rendererContext):
+        transform = rendererContext.coordinateTransform()
+        ext = rendererContext.extent()
+        mapToPixel = rendererContext.mapToPixel()
+        windowSize = QSize(
+                int((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel()), 
+                int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel())) 
 
-        if self.__transform \
-                and self.__transform.destCRS() != self.__destCRS:
-            self.__destCRS = self.__transform.destCRS()
-            vtx = numpy.array(self.__meshDataProvider.nodeCoord())
+        if transform \
+                and transform.destCRS() != destCRS:
+            destCRS = transform.destCRS()
+            vtx = numpy.array(meshDataProvider.nodeCoord())
             def transf(x):
-                p = self.__transform.transform(x[0], x[1])
+                p = transform.transform(x[0], x[1])
                 return [p.x(), p.y(), x[2]]
             vtx = numpy.apply_along_axis(transf, 1, vtx)
             self.__glMesh.resetCoord(vtx)
 
-        if self.__transform:
-            self.__ext = self.__transform.transform(self.__ext)
+        if transform:
+            ext = transform.transform(ext)
         self.__glMesh.setColorPerElement(self.__meshDataProvider.valueAtElement())
-        self.__img = self.__glMesh.image(
+        return self.__glMesh.image(
                 self.__meshDataProvider.elementValues() 
                    if self.__meshDataProvider.valueAtElement() else
                    self.__meshDataProvider.nodeValues(),
-                self.__windowSize,
-                (.5*(self.__ext.xMinimum() + self.__ext.xMaximum()), 
-                 .5*(self.__ext.yMinimum() + self.__ext.yMaximum())),
-                (self.__mapToPixel.mapUnitsPerPixel(), 
-                 self.__mapToPixel.mapUnitsPerPixel()),
-                 self.__mapToPixel.mapRotation())
-        self.__imageChangedMutex.unlock()
-
-    def draw(self, rendererContext):
-        """This function is called by the rendering thread. 
-        GlMesh must be created in the main thread."""
-        try:
-            painter = rendererContext.painter()
-            if QApplication.instance().thread() != QThread.currentThread():
-                self.__imageChangedMutex.lock()
-                self.__transform = rendererContext.coordinateTransform()
-                self.__ext = rendererContext.extent()
-                self.__mapToPixel = rendererContext.mapToPixel()
-                self.__windowSize = QSize(
-                        int((self.__ext.xMaximum()-self.__ext.xMinimum())/self.__mapToPixel.mapUnitsPerPixel()), 
-                        int((self.__ext.yMaximum()-self.__ext.yMinimum())/self.__mapToPixel.mapUnitsPerPixel())) 
-                self.__img = None
-                self.__imageChangedMutex.unlock()
-                self.__imageChangeRequested.emit()
-                while not self.__img and not rendererContext.renderingStopped():
-                    time.sleep(.001) # active wait to avoid deadlocking if envent loop is stopped
-                                     # this happens when a render job is cancellled
-                if not rendererContext.renderingStopped():
-                    painter.drawImage(0,0, self.__img)
-            else:
-                self.__imageChangedMutex.lock()
-                self.__transform = rendererContext.coordinateTransform()
-                self.__ext = rendererContext.extent()
-                self.__mapToPixel = rendererContext.mapToPixel()
-                self.__windowSize = QSize(
-                        int((self.__ext.xMaximum()-self.__ext.xMinimum())/self.__mapToPixel.mapUnitsPerPixel()), 
-                        int((self.__ext.yMaximum()-self.__ext.yMinimum())/self.__mapToPixel.mapUnitsPerPixel())) 
-                self.__imageChangedMutex.unlock()
-                self.__drawInMainThread()
-                painter.drawImage(0, 0, self.__img)
-
-            return True
-        except Exception as e:
-            # since we are in a thread, we must re-raise the exception
-            self.__drawException.emit(traceback.format_exc())
-            return False
+                windowSize,
+                (.5*(ext.xMinimum() + ext.xMaximum()), 
+                 .5*(ext.yMinimum() + ext.yMaximum())),
+                (mapToPixel.mapUnitsPerPixel(), 
+                 mapToPixel.mapUnitsPerPixel()),
+                 mapToPixel.mapRotation())
 
     def isovalues(self, values):
         """return a list of multilinestring, one for each value in values"""
