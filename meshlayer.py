@@ -108,7 +108,7 @@ class MeshLayer(OpenGlLayer):
         self.__legend = None
         if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
-        self.__destCRS = None
+        #self.__destCRS = None
 
     def setColorLegend(self, legend):
         if self.__legend:
@@ -210,6 +210,10 @@ class MeshLayer(OpenGlLayer):
                 (mapToPixel.mapUnitsPerPixel(), 
                  mapToPixel.mapUnitsPerPixel()),
                  mapToPixel.mapRotation())
+
+    #def draw(self, rendererContext):
+    #    print "MeshLayer.draw"
+    #    OpenGlLayer.draw(self, rendererContext)
 
     def isovalues(self, values):
         """return a list of multilinestring, one for each value in values"""

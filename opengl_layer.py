@@ -9,6 +9,23 @@ from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
+import os
+
+class OpenGlLayerType(QgsPluginLayerType):
+    def __init__(self):
+        QgsPluginLayerType.__init__(self, OpenGlLayer.LAYER_TYPE)
+        #self.__dlg = None
+
+    def createLayer(self):
+        return OpenGlLayer()
+
+        # indicate that we have shown the properties dialog
+        return True
+
+    def showLayerProperties(self, layer):
+        #self.__dlg = PropertyDialog(layer)
+        return False
+
 class OpenGlLayer(QgsPluginLayer):
     """Base class to encapsulate the tricks to create OpenGL layers
     /!\ the layer is drwn in main thread due to current Qt limitations
@@ -18,6 +35,8 @@ class OpenGlLayer(QgsPluginLayer):
 
     Child class must implement the image method
     """
+    
+    LAYER_TYPE = "opengl_layer"
 
     __msg = pyqtSignal(str)
     __drawException = pyqtSignal(str)
@@ -29,22 +48,37 @@ class OpenGlLayer(QgsPluginLayer):
     def __raise(self, err):
         raise Exception(err)
 
-    def __init__(self, type_ ="opengl_layer", name=None):
-        QgsPluginLayer.__init__(self, type_, name)
+    def __init__(self, type_=None, name=None):
+        QgsPluginLayer.__init__(self, type_ if type_ is not None else OpenGlLayer.LAYER_TYPE, name)
         self.__imageChangedMutex = QMutex()
         self.__imageChangeRequested.connect(self.__drawInMainThread)
         self.__img = None
         self.__rendererContext = None
         self.__drawException.connect(self.__raise)
         self.__msg.connect(self.__print)
+        self.setExtent(QgsRectangle(-1e9, -1e9, 1e9, 1e9))
+        self.setCrs(QgsCoordinateReferenceSystem('EPSG:2154'))
+        #self.__destCRS = None
+        self.setValid(True)
 
     def image(self, rendererContext):
         """This is the function that should be overwritten
         the rendererContext does not have a painter and an
         image must be returned instead
         """
-        print "default image, we should not be here"
-        return QImage(QSize(512,512))
+        ext = rendererContext.extent()
+        mapToPixel = rendererContext.mapToPixel()
+        windowSize = QSize(
+                int((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel()), 
+                int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel())) 
+        img = QImage(windowSize)
+        painter = QPainter()
+        painter.begin(img)
+        painter.drawText(100, 100, "GlMesh.image default implementation")
+        painter.end()
+        img.save('/tmp/toto.png')
+        self.__msg.emit("default image, we should not be here")
+        return img
 
     def __drawInMainThread(self):
         self.__imageChangedMutex.lock()
@@ -62,7 +96,6 @@ class OpenGlLayer(QgsPluginLayer):
             self.__rendererContext.setPainter(None)
             self.__img = None
             self.__imageChangedMutex.unlock()
-
             if QApplication.instance().thread() != QThread.currentThread():
                 self.__imageChangeRequested.emit()
                 while not self.__img and not rendererContext.renderingStopped():
