@@ -108,7 +108,7 @@ class MeshLayer(OpenGlLayer):
         self.__legend = None
         if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
-        #self.__destCRS = None
+        self.__destCRS = None
 
     def setColorLegend(self, legend):
         if self.__legend:
@@ -188,8 +188,8 @@ class MeshLayer(OpenGlLayer):
                 int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel())) 
 
         if transform \
-                and transform.destCRS() != destCRS:
-            destCRS = transform.destCRS()
+                and transform.destCRS() != self.__destCRS:
+            self.__destCRS = transform.destCRS()
             vtx = numpy.array(meshDataProvider.nodeCoord())
             def transf(x):
                 p = transform.transform(x[0], x[1])
@@ -200,7 +200,7 @@ class MeshLayer(OpenGlLayer):
         if transform:
             ext = transform.transform(ext)
         self.__glMesh.setColorPerElement(self.__meshDataProvider.valueAtElement())
-        return self.__glMesh.image(
+        img = self.__glMesh.image(
                 self.__meshDataProvider.elementValues() 
                    if self.__meshDataProvider.valueAtElement() else
                    self.__meshDataProvider.nodeValues(),
@@ -210,6 +210,7 @@ class MeshLayer(OpenGlLayer):
                 (mapToPixel.mapUnitsPerPixel(), 
                  mapToPixel.mapUnitsPerPixel()),
                  mapToPixel.mapRotation())
+        return img
 
     #def draw(self, rendererContext):
     #    print "MeshLayer.draw"

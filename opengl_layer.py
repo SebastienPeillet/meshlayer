@@ -12,15 +12,12 @@ from PyQt4.QtGui import *
 import os
 
 class OpenGlLayerType(QgsPluginLayerType):
-    def __init__(self):
-        QgsPluginLayerType.__init__(self, OpenGlLayer.LAYER_TYPE)
+    def __init__(self, type_=None):
+        QgsPluginLayerType.__init__(self, type_ or OpenGlLayer.LAYER_TYPE)
         #self.__dlg = None
 
     def createLayer(self):
         return OpenGlLayer()
-
-        # indicate that we have shown the properties dialog
-        return True
 
     def showLayerProperties(self, layer):
         #self.__dlg = PropertyDialog(layer)
@@ -51,6 +48,7 @@ class OpenGlLayer(QgsPluginLayer):
     def __init__(self, type_=None, name=None):
         QgsPluginLayer.__init__(self, type_ if type_ is not None else OpenGlLayer.LAYER_TYPE, name)
         self.__imageChangedMutex = QMutex()
+        self.__drawMutex = QMutex()
         self.__imageChangeRequested.connect(self.__drawInMainThread)
         self.__img = None
         self.__rendererContext = None
@@ -71,13 +69,13 @@ class OpenGlLayer(QgsPluginLayer):
         windowSize = QSize(
                 int((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel()), 
                 int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel())) 
-        img = QImage(windowSize)
+        img = QImage(windowSize, QImage.Format_ARGB32)
         painter = QPainter()
         painter.begin(img)
         painter.drawText(100, 100, "GlMesh.image default implementation")
         painter.end()
         img.save('/tmp/toto.png')
-        self.__msg.emit("default image, we should not be here")
+        print "default image, we should not be here"
         return img
 
     def __drawInMainThread(self):
@@ -88,6 +86,7 @@ class OpenGlLayer(QgsPluginLayer):
     def draw(self, rendererContext):
         """This function is called by the rendering thread. 
         GlMesh must be created in the main thread."""
+        self.__drawMutex.lock()
         try:
             # /!\ DO NOT PRIN IN THREAD
             painter = rendererContext.painter()
@@ -99,7 +98,7 @@ class OpenGlLayer(QgsPluginLayer):
             if QApplication.instance().thread() != QThread.currentThread():
                 self.__imageChangeRequested.emit()
                 while not self.__img and not rendererContext.renderingStopped():
-                    # active wait to avoid deadlocking if envent loop is stopped
+                    # active wait to avoid deadlocking if event loop is stopped
                     # this happens when a render job is cancellled
                     QThread.msleep(1)
 
@@ -109,9 +108,11 @@ class OpenGlLayer(QgsPluginLayer):
                 self.__drawInMainThread()
                 painter.drawImage(0, 0, self.__img)
 
+            self.__drawMutex.unlock()
             return True
         except Exception as e:
             # since we are in a thread, we must re-raise the exception
             self.__drawException.emit(traceback.format_exc())
+            self.__drawMutex.unlock()
             return False
 

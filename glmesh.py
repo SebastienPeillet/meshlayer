@@ -362,10 +362,8 @@ class GlMesh(QObject):
         self.__colorPerElement = False
         self.__recompileShader = False
 
-        #self.__previousLegend = legend
+        self.__vtx[:,2] = 0
 
-    #def setLegend(self, legend):
-    #    self.__legend = legend
     def __recompileNeeded(self):
         self.__recompileShader = True
 
@@ -482,12 +480,13 @@ class GlMesh(QObject):
         glShadeModel(GL_FLAT)
         
         glClear(GL_COLOR_BUFFER_BIT)
+        glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
         # scale
         glScalef(2./(roundupSz.width()*mapUnitsPerPixel[0]), 
                  2./(roundupSz.height()*mapUnitsPerPixel[1]),
-                 1.)
+                 1)
         # rotate
         glRotatef(-rotation, 0, 0, 1)
 
@@ -515,9 +514,9 @@ class GlMesh(QObject):
 
 
 bgra_dtype = numpy.dtype({'b': (numpy.uint8, 0),
-						  'g': (numpy.uint8, 1),
-						  'r': (numpy.uint8, 2),
-						  'a': (numpy.uint8, 3)})
+                          'g': (numpy.uint8, 1),
+                          'r': (numpy.uint8, 2),
+                          'a': (numpy.uint8, 3)})
 
 def qimage2numpy(qimage, dtype = 'array'):
 	"""Convert QImage to numpy.ndarray.  The dtype defaults to uint8
