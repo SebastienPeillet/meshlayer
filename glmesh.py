@@ -455,9 +455,6 @@ class GlMesh(QObject):
         if not self.__pixBuf \
                 or roundupSz.width() != self.__pixBuf.size().width() \
                 or roundupSz.height() != self.__pixBuf.size().height():
-                #or self.__legend != self.__previousLegend:
-            # we need to call the main thread for a change of the
-            # pixel buffer and wait for the change to happen
             self.__resize(roundupSz)
         
 
@@ -490,22 +487,22 @@ class GlMesh(QObject):
         # rotate
         glRotatef(-rotation, 0, 0, 1)
 
-        # translate
-        glTranslatef(-center[0],
-                     -center[1],
-                     0)
+        ## translate
+        #glTranslatef(-center[0],
+        #             -center[1],
+        #             0)
 
         glUseProgram(self.__shaders)
 
         self.__legend._setUniforms(self.__pixBuf)
 
-        glVertexPointerf(self.__vtx)
+        vtx = self.__vtx - numpy.array([center[0], center[1], 0])
+        glVertexPointerf(vtx)
         glTexCoordPointer(1, GL_FLOAT, 0, val)
         glDrawElementsui(GL_TRIANGLES, self.__idx)
 
         img = self.__pixBuf.toImage()
         self.__pixBuf.doneCurrent()
-        #GlMesh.__contextMutex.unlock()
 
         return img.copy( .5*(roundupSz.width()-imageSize.width()), 
                          .5*(roundupSz.height()-imageSize.height()), 

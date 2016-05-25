@@ -10,7 +10,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 import numpy
-from math import pow, log, ceil
+from math import pow, log, ceil, sin, cos, pi
 
 import os
 import re
@@ -179,42 +179,34 @@ class MeshLayer(OpenGlLayer):
     def dataProvider(self):
         return self.__meshDataProvider
 
-    def image(self, rendererContext):
+    def image(self, rendererContext, size):
         transform = rendererContext.coordinateTransform()
         ext = rendererContext.extent()
         mapToPixel = rendererContext.mapToPixel()
-        windowSize = QSize(
-                int((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel()), 
-                int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel())) 
-
-        if transform \
-                and transform.destCRS() != self.__destCRS:
-            self.__destCRS = transform.destCRS()
-            vtx = numpy.array(meshDataProvider.nodeCoord())
-            def transf(x):
-                p = transform.transform(x[0], x[1])
-                return [p.x(), p.y(), x[2]]
-            vtx = numpy.apply_along_axis(transf, 1, vtx)
-            self.__glMesh.resetCoord(vtx)
 
         if transform:
             ext = transform.transform(ext)
+            if transform.destCRS() != self.__destCRS:
+                self.__destCRS = transform.destCRS()
+                vtx = numpy.array(self.__meshDataProvider.nodeCoord())
+                def transf(x):
+                    p = transform.transform(x[0], x[1])
+                    return [p.x(), p.y(), x[2]]
+                vtx = numpy.apply_along_axis(transf, 1, vtx)
+                self.__glMesh.resetCoord(vtx)
+
         self.__glMesh.setColorPerElement(self.__meshDataProvider.valueAtElement())
         img = self.__glMesh.image(
                 self.__meshDataProvider.elementValues() 
                    if self.__meshDataProvider.valueAtElement() else
                    self.__meshDataProvider.nodeValues(),
-                windowSize,
+                size,
                 (.5*(ext.xMinimum() + ext.xMaximum()), 
                  .5*(ext.yMinimum() + ext.yMaximum())),
                 (mapToPixel.mapUnitsPerPixel(), 
                  mapToPixel.mapUnitsPerPixel()),
                  mapToPixel.mapRotation())
         return img
-
-    #def draw(self, rendererContext):
-    #    print "MeshLayer.draw"
-    #    OpenGlLayer.draw(self, rendererContext)
 
     def isovalues(self, values):
         """return a list of multilinestring, one for each value in values"""

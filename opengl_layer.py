@@ -59,7 +59,7 @@ class OpenGlLayer(QgsPluginLayer):
         #self.__destCRS = None
         self.setValid(True)
 
-    def image(self, rendererContext):
+    def image(self, rendererContext, size):
         """This is the function that should be overwritten
         the rendererContext does not have a painter and an
         image must be returned instead
@@ -80,7 +80,7 @@ class OpenGlLayer(QgsPluginLayer):
 
     def __drawInMainThread(self):
         self.__imageChangedMutex.lock()
-        self.__img = self.image(self.__rendererContext)
+        self.__img = self.image(self.__rendererContext, self.__size)
         self.__imageChangedMutex.unlock()
 
     def draw(self, rendererContext):
@@ -93,6 +93,7 @@ class OpenGlLayer(QgsPluginLayer):
             self.__imageChangedMutex.lock()
             self.__rendererContext = QgsRenderContext(rendererContext)
             self.__rendererContext.setPainter(None)
+            self.__size = painter.viewport().size()
             self.__img = None
             self.__imageChangedMutex.unlock()
             if QApplication.instance().thread() != QThread.currentThread():
