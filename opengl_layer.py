@@ -48,7 +48,6 @@ class OpenGlLayer(QgsPluginLayer):
     def __init__(self, type_=None, name=None):
         QgsPluginLayer.__init__(self, type_ if type_ is not None else OpenGlLayer.LAYER_TYPE, name)
         self.__imageChangedMutex = QMutex()
-        self.__drawMutex = QMutex()
         self.__imageChangeRequested.connect(self.__drawInMainThread)
         self.__img = None
         self.__rendererContext = None
@@ -86,7 +85,6 @@ class OpenGlLayer(QgsPluginLayer):
     def draw(self, rendererContext):
         """This function is called by the rendering thread. 
         GlMesh must be created in the main thread."""
-        self.__drawMutex.lock()
         try:
             # /!\ DO NOT PRIN IN THREAD
             painter = rendererContext.painter()
@@ -109,11 +107,9 @@ class OpenGlLayer(QgsPluginLayer):
                 self.__drawInMainThread()
                 painter.drawImage(0, 0, self.__img)
 
-            self.__drawMutex.unlock()
             return True
         except Exception as e:
             # since we are in a thread, we must re-raise the exception
             self.__drawException.emit(traceback.format_exc())
-            self.__drawMutex.unlock()
             return False
 

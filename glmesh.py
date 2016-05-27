@@ -488,16 +488,15 @@ class GlMesh(QObject):
         glRotatef(-rotation, 0, 0, 1)
 
         ## translate
-        #glTranslatef(-center[0],
-        #             -center[1],
-        #             0)
+        glTranslatef(-center[0],
+                     -center[1],
+                     0)
 
         glUseProgram(self.__shaders)
 
         self.__legend._setUniforms(self.__pixBuf)
 
-        vtx = self.__vtx - numpy.array([center[0], center[1], 0])
-        glVertexPointerf(vtx)
+        glVertexPointerf(self.__vtx)
         glTexCoordPointer(1, GL_FLOAT, 0, val)
         glDrawElementsui(GL_TRIANGLES, self.__idx)
 
