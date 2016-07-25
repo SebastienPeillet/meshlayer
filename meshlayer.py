@@ -186,6 +186,10 @@ class MeshLayer(OpenGlLayer):
         ext = rendererContext.extent()
         mapToPixel = rendererContext.mapToPixel()
 
+        size = QSize((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel(),
+                     (ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel()) \
+                             if abs(mapToPixel.mapRotation()) < .01 else size
+
         if transform:
             ext = transform.transform(ext)
             if transform.destCRS() != self.__destCRS:
