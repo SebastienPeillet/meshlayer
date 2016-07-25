@@ -69,4 +69,14 @@ if __name__ == "__main__":
     #@todo: unit test linemerge
     pass
 
+class Timer(object):
+    def __init__(self):
+        self.start = time.time()
+    def reset(self, text=""):
+        s = self.start
+        self.start = time.time()
+        return "%30s % 8.4f sec"%(text, (self.start - s))
+
+
+
 

@@ -9,6 +9,8 @@ from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
+from .utilities import Timer
+
 import os
 
 class OpenGlLayerType(QgsPluginLayerType):
@@ -32,7 +34,7 @@ class OpenGlLayer(QgsPluginLayer):
 
     Child class must implement the image method
     """
-    
+
     LAYER_TYPE = "opengl_layer"
 
     __msg = pyqtSignal(str)
@@ -57,6 +59,7 @@ class OpenGlLayer(QgsPluginLayer):
         self.setCrs(QgsCoordinateReferenceSystem('EPSG:2154'))
         #self.__destCRS = None
         self.setValid(True)
+        self.__timing = False
 
     def image(self, rendererContext, size):
         """This is the function that should be overwritten
@@ -66,8 +69,8 @@ class OpenGlLayer(QgsPluginLayer):
         ext = rendererContext.extent()
         mapToPixel = rendererContext.mapToPixel()
         windowSize = QSize(
-                int((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel()), 
-                int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel())) 
+                int((ext.xMaximum()-ext.xMinimum())/mapToPixel.mapUnitsPerPixel()),
+                int((ext.yMaximum()-ext.yMinimum())/mapToPixel.mapUnitsPerPixel()))
         img = QImage(windowSize, QImage.Format_ARGB32)
         painter = QPainter()
         painter.begin(img)
@@ -83,10 +86,11 @@ class OpenGlLayer(QgsPluginLayer):
         self.__imageChangedMutex.unlock()
 
     def draw(self, rendererContext):
-        """This function is called by the rendering thread. 
+        """This function is called by the rendering thread.
         GlMesh must be created in the main thread."""
+        timer = Timer() if self.__timing else None
         try:
-            # /!\ DO NOT PRIN IN THREAD
+            # /!\ DO NOT PRINT IN THREAD
             painter = rendererContext.painter()
             self.__imageChangedMutex.lock()
             self.__rendererContext = QgsRenderContext(rendererContext)
@@ -100,13 +104,16 @@ class OpenGlLayer(QgsPluginLayer):
                     # active wait to avoid deadlocking if event loop is stopped
                     # this happens when a render job is cancellled
                     QThread.msleep(1)
+                if rendererContext.renderingStopped():
+                    self.__msg.emit("rendering stopped")
 
                 if not rendererContext.renderingStopped():
                     painter.drawImage(0, 0, self.__img)
             else:
                 self.__drawInMainThread()
                 painter.drawImage(0, 0, self.__img)
-
+            if self.__timing:
+                self.__msg.emit(timer.reset("OpenGlLayer.draw"))
             return True
         except Exception as e:
             # since we are in a thread, we must re-raise the exception

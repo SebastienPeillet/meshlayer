@@ -20,7 +20,7 @@ def roundUpSize(size):
 class ColorLegend(QGraphicsScene):
     """A legend provides the symbology for a layer.
     The legend is responsible for the translation of values into color.
-    For performace and flexibility reasons the legend provide shader 
+    For performace and flexibility reasons the legend provide shader
     functions that will take a value and return a color.
     """
 
@@ -38,7 +38,7 @@ class ColorLegend(QGraphicsScene):
         }
         """
 
-    
+
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
         self.__minValue = 0
@@ -53,6 +53,7 @@ class ColorLegend(QGraphicsScene):
         self.__pixelColor = ColorLegend.__pixelColorContinuous
         self.__graduation = []
         self.__graduated = False
+        self.__maskUnits = False
 
     @staticmethod
     def availableRamps():
@@ -70,7 +71,7 @@ class ColorLegend(QGraphicsScene):
 
             for c, min_, max_ in self.__graduation:
                 self.__pixelColor += "    if (float(%g) < value && value <= float(%g)) return vec4(%g, %g, %g, 1.);\n"%(
-                        min_, max_, c.redF(), c.greenF(), c.blueF()) 
+                        min_, max_, c.redF(), c.greenF(), c.blueF())
             self.__pixelColor += "    return vec4(0., 0., 0., 0.);\n"
             self.__pixelColor += "}\n";
         else:
@@ -84,9 +85,9 @@ class ColorLegend(QGraphicsScene):
 
     def graduation(self):
         return self.__graduation
-     
+
     def _fragmentShader(self):
-        """Return a string containing the definition of the GLSL pixel shader 
+        """Return a string containing the definition of the GLSL pixel shader
             vec4 pixelColor(float value)
         This may contain global shader variables and should therefore
         be included in the fragment shader between the global variables
@@ -139,8 +140,8 @@ class ColorLegend(QGraphicsScene):
 
         sz = self.sceneRect().size().toSize()
         img = QImage(
-                sz.width(), 
-                sz.height(), 
+                sz.width(),
+                sz.height(),
                 self.__colorRamp.format())
         img.fill(Qt.transparent)
         with QPainter(img) as p:
@@ -159,6 +160,10 @@ class ColorLegend(QGraphicsScene):
         for item in grp.childItems():
             self.addItem(item);
 
+    def maskUnits(self, flag):
+        self.__maskUnits = flag
+        self.symbologyChanged.emit()
+
     def createItems(self):
         """returns a QGraphicsItemGroup that contains legend items"""
         grp = QGraphicsItemGroup()
@@ -169,7 +174,7 @@ class ColorLegend(QGraphicsScene):
         barPosition = QPoint(0, 1.75*textHeight)
         headerPosition = QPoint(0,0)
         bottomSpace = 15
-        text = QGraphicsTextItem(self.__title+" ["+self.__units+"]")
+        text = QGraphicsTextItem(self.__title+(" ["+self.__units+"]" if not self.__maskUnits else ""))
         grp.addToGroup(text)
         text.setPos(headerPosition)
 
@@ -222,7 +227,7 @@ class ColorLegend(QGraphicsScene):
 
     def title(self):
         return self.__title
-    
+
     def setUnits(self, text):
         """set the units to display in legend"""
         self.__units = text
@@ -327,7 +332,7 @@ class ColorLegend(QGraphicsScene):
             graduation.append((QColor(c), float(min_), float(max_)))
         self.setGraduation(graduation)
         self.toggleGraduation(bool(int(element.attribute("graduated"))))
-        
+
         self.__refresh()
         return True
 
@@ -372,7 +377,7 @@ class GlMesh(QObject):
             return # nothing to do
         self.__colorPerElement = flag
         if self.__colorPerElement:
-            # we duplicate vertices 
+            # we duplicate vertices
             idx = self.__idx
             self.__origVtx = self.__vtx
             self.__vtx = numpy.concatenate((
@@ -382,9 +387,9 @@ class GlMesh(QObject):
             self.__origIdx = self.__idx
             nbElem = len(self.__idx)
             self.__idx = numpy.reshape(
-                numpy.array([numpy.arange(nbElem), 
-                             numpy.arange(nbElem, 2*nbElem), 
-                             numpy.arange(2*nbElem, 3*nbElem)]), 
+                numpy.array([numpy.arange(nbElem),
+                             numpy.arange(nbElem, 2*nbElem),
+                             numpy.arange(2*nbElem, 3*nbElem)]),
                 (3,-1)).transpose()
         else:
            self.__idx = self.__origIdx
@@ -421,7 +426,7 @@ class GlMesh(QObject):
         # QGLPixelBuffer size must be power of 2
         assert roundupImageSize == roundUpSize(roundupImageSize)
 
-        # force alpha format, it should be the default, 
+        # force alpha format, it should be the default,
         # but isn't all the time (uninitialized)
         fmt = QGLFormat()
         fmt.setAlpha(True)
@@ -432,13 +437,13 @@ class GlMesh(QObject):
         self.__pixBuf.bindToDynamicTexture(self.__pixBuf.generateDynamicTexture())
         self.__compileShaders()
         self.__pixBuf.doneCurrent()
-    
+
     def resetCoord(self, vtx):
         self.__vtx = numpy.require(vtx, numpy.float32, 'F')
 
 
     def image(self, values, imageSize, center, mapUnitsPerPixel, rotation=0):
-        """Return the rendered image of a given size for values defined at each vertex 
+        """Return the rendered image of a given size for values defined at each vertex
         or at each element depending on setColorPerElement.
         Values are normalized using valueRange = (minValue, maxValue).
         transparency is in the range [0,1]"""
@@ -447,7 +452,7 @@ class GlMesh(QObject):
             raise RuntimeError("trying to use gl draw calls in a thread")
 
         if not len(values):
-            img = QImage(imageSize)
+            img = QImage(imageSize, QImage.Format_ARGB32)
             img.fill(Qt.transparent)
             return img
 
@@ -456,7 +461,7 @@ class GlMesh(QObject):
                 or roundupSz.width() != self.__pixBuf.size().width() \
                 or roundupSz.height() != self.__pixBuf.size().height():
             self.__resize(roundupSz)
-        
+
 
         val = numpy.require(values, numpy.float32) \
                 if not isinstance(values, numpy.ndarray)\
@@ -475,13 +480,13 @@ class GlMesh(QObject):
         glEnable(GL_TEXTURE_2D)
 
         glShadeModel(GL_FLAT)
-        
+
         glClear(GL_COLOR_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
         # scale
-        glScalef(2./(roundupSz.width()*mapUnitsPerPixel[0]), 
+        glScalef(2./(roundupSz.width()*mapUnitsPerPixel[0]),
                  2./(roundupSz.height()*mapUnitsPerPixel[1]),
                  1)
         # rotate
@@ -503,9 +508,9 @@ class GlMesh(QObject):
         img = self.__pixBuf.toImage()
         self.__pixBuf.doneCurrent()
 
-        return img.copy( .5*(roundupSz.width()-imageSize.width()), 
-                         .5*(roundupSz.height()-imageSize.height()), 
-                         imageSize.width(), imageSize.height()) 
+        return img.copy( .5*(roundupSz.width()-imageSize.width()),
+                         .5*(roundupSz.height()-imageSize.height()),
+                         imageSize.width(), imageSize.height())
 
 
 
@@ -610,7 +615,7 @@ def rgb2qimage(rgb):
 if __name__ == "__main__":
 
     import sys
-    
+
     app = QApplication(sys.argv)
 
     legend = ColorLegend()
@@ -619,7 +624,7 @@ if __name__ == "__main__":
     legend.setTransparencyPercent(50)
     mesh = GlMesh(((0,0,0),(1,0,0),(1,1,0),(1,2,0),(0,2,0),(0,1,0)),
             ((0,1,2),(0,2,5),(5,2,3),(5,3,4)), legend)
-    img = mesh.image( 
+    img = mesh.image(
             (.01, .01, .5*33.01, 33, 33,  .5*33.01),
             QSize(800,600),
             (0,0),
@@ -637,7 +642,7 @@ if __name__ == "__main__":
     assert numpy.linalg.norm(diff) < 200
 
     legend.setLogScale(True)
-    img = mesh.image( 
+    img = mesh.image(
             (.01, .01, .1, 33, 33, .1),
             QSize(800,600),
             (0,0),
@@ -651,7 +656,7 @@ if __name__ == "__main__":
 
     legend.setLogScale(False)
     mesh.setColorPerElement(True)
-    img = mesh.image( 
+    img = mesh.image(
             (0, 10, 20, 30),
             QSize(800,600),
             (0,0),

@@ -23,7 +23,7 @@ from opengl_layer import OpenGlLayer
 from meshdataproviderregistry import MeshDataProviderRegistry
 from meshlayerpropertydialog import MeshLayerPropertyDialog
 
-from utilities import linemerge
+from utilities import linemerge, Timer
 
 class MeshLayerType(QgsPluginLayerType):
     def __init__(self):
@@ -54,7 +54,7 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
             return self.__legend.image()
         else:
             return None
-    
+
     def draw(self, settings, ctx):
         symbolLabelFont = settings.style(QgsComposerLegendStyle.SymbolLabel).font()
         textHeight = settings.fontHeightCharacterMM(symbolLabelFont, '0');
@@ -79,7 +79,7 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
             ctx.painter.translate(currentXPosition, currentYCoord)
             rect = QRectF()
             rect.setSize(QSizeF(im.symbolSize))
-            self.__legend.render(ctx.painter, rect) 
+            self.__legend.render(ctx.painter, rect)
             #ctx.painter.drawImage(0, 0, self.image)
             ctx.painter.restore()
         return im
@@ -109,6 +109,7 @@ class MeshLayer(OpenGlLayer):
         if uri:
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
         self.__destCRS = None
+        self.__timing = False
 
     def setColorLegend(self, legend):
         if self.__legend:
@@ -131,7 +132,7 @@ class MeshLayer(OpenGlLayer):
         self.__legend.symbologyChanged.connect(self.__symbologyChanged)
         assert QApplication.instance().thread() == QThread.currentThread()
         self.__glMesh = GlMesh(
-                meshDataProvider.nodeCoord(), 
+                meshDataProvider.nodeCoord(),
                 meshDataProvider.triangles(),
                 self.__legend
                 )
@@ -169,7 +170,7 @@ class MeshLayer(OpenGlLayer):
         if not self.__meshDataProvider.writeXml(dataProvider, doc):
             return False
         element.appendChild(dataProvider)
-        
+
         colorLegend = doc.createElement("colorLegend")
         if not self.__legend.writeXml(colorLegend, doc):
             return False
@@ -180,6 +181,7 @@ class MeshLayer(OpenGlLayer):
         return self.__meshDataProvider
 
     def image(self, rendererContext, size):
+        timer = Timer() if self.__timing else None
         transform = rendererContext.coordinateTransform()
         ext = rendererContext.extent()
         mapToPixel = rendererContext.mapToPixel()
@@ -197,15 +199,17 @@ class MeshLayer(OpenGlLayer):
 
         self.__glMesh.setColorPerElement(self.__meshDataProvider.valueAtElement())
         img = self.__glMesh.image(
-                self.__meshDataProvider.elementValues() 
+                self.__meshDataProvider.elementValues()
                    if self.__meshDataProvider.valueAtElement() else
                    self.__meshDataProvider.nodeValues(),
                 size,
-                (.5*(ext.xMinimum() + ext.xMaximum()), 
+                (.5*(ext.xMinimum() + ext.xMaximum()),
                  .5*(ext.yMinimum() + ext.yMaximum())),
-                (mapToPixel.mapUnitsPerPixel(), 
+                (mapToPixel.mapUnitsPerPixel(),
                  mapToPixel.mapUnitsPerPixel()),
                  mapToPixel.mapRotation())
+        if self.__timing:
+            print timer.reset("render 2D mesh image")
         return img
 
     def isovalues(self, values):
@@ -219,15 +223,15 @@ class MeshLayer(OpenGlLayer):
             # we filer triangles in which the value is negative on at least
             # one node and positive on at leat one node
             filtered = idx[numpy.logical_or(
-                val[idx[:, 0]]*val[idx[:, 1]] <= 0, 
-                val[idx[:, 0]]*val[idx[:, 2]] <= 0 
+                val[idx[:, 0]]*val[idx[:, 1]] <= 0,
+                val[idx[:, 0]]*val[idx[:, 2]] <= 0
                 ).reshape((-1,))]
             # create line segments
             for tri in filtered:
                 line = []
                 # the edges are sorted to avoid interpolation error
-                for edge in [sorted([tri[0], tri[1]]), 
-                             sorted([tri[1], tri[2]]), 
+                for edge in [sorted([tri[0], tri[1]]),
+                             sorted([tri[1], tri[2]]),
                              sorted([tri[2], tri[0]])]:
                     if val[edge[0]]*val[edge[1]] <= 0:
                         alpha = -val[edge[0]]/(val[edge[1]] - val[edge[0]])\
@@ -256,7 +260,7 @@ if __name__ == "__main__":
     MeshDataProviderRegistry.instance().addDataProviderType("wind", WindDataProvider)
 
     assert len(sys.argv) >= 2
-    
+
 
 
     uri = 'directory='+sys.argv[1]+' crs=epsg:2154'
@@ -281,7 +285,7 @@ if __name__ == "__main__":
     start = time.time()
     values = [float(v) for v in sys.argv[4:]]
     lines = layer.isovalues(values)
-    print "total time ", time.time() - start 
+    print "total time ", time.time() - start
     isolines = QgsVectorLayer("MultiLineString?crs=epsg:27572&field=value:double", "isovalues", "memory")
     pr = isolines.dataProvider()
     features = []
