@@ -230,6 +230,7 @@ class ColorLegend(QGraphicsScene):
 
     def setUnits(self, text):
         """set the units to display in legend"""
+        assert text is not None
         self.__units = text
         self.__refresh()
         self.symbologyChanged.emit()
