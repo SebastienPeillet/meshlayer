@@ -221,6 +221,7 @@ class ColorLegend(QGraphicsScene):
         return self.__scale == "log"
 
     def setTitle(self, text):
+        assert text is not None
         self.__title = text
         self.__refresh()
         self.symbologyChanged.emit()
