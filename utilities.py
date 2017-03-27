@@ -21,7 +21,7 @@ def multiplier(value):
     mult = 1e-9
     for x in sorted(multiplyers.keys()):
         if x <= abs(value):
-            mult = x 
+            mult = x
     return mult, multiplyers[mult]
 
 def linemerge(lines):
@@ -32,14 +32,14 @@ def linemerge(lines):
         b = tuple(line[0])
         e = tuple(line[-1])
         if b in graph:
-            graph[b].add(e) 
-        else: 
+            graph[b].add(e)
+        else:
             graph[b] = set([e])
         if e in graph:
-            graph[e].add(b) 
-        else: 
+            graph[e].add(b)
+        else:
             graph[e] = set([b])
-     
+
     # now consume the graph
     if not len(graph):
         return []
@@ -62,7 +62,7 @@ def linemerge(lines):
         else:
             out[-1].append(nxt)
     return out
-         
+
 # run as script for testing
 if __name__ == "__main__":
     #@todo: unit test multiplier
@@ -76,7 +76,6 @@ class Timer(object):
         s = self.start
         self.start = time.time()
         return "%30s % 8.4f sec"%(text, (self.start - s))
-
 
 
 

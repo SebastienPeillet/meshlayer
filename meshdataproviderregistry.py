@@ -15,7 +15,7 @@ class MeshDataProviderRegistry(object):
                 raise RuntimeError("Missing providerKey")
 
             prvdr = self.__providers[providerKey](dataSource)
-            
+
             if not prvdr:
                 raise RuntimeError("Cannot create provider "+providerKey+" from uri:"+dataSource)
             if not prvdr.isValid():
@@ -30,11 +30,10 @@ class MeshDataProviderRegistry(object):
         def removeDataProviderType(self, providerKey):
             """remove provider from registry"""
 
-    @staticmethod 
+    @staticmethod
     def instance():
         """returns the singleton instance"""
         if not MeshDataProviderRegistry.__INSTANCE:
             MeshDataProviderRegistry.__INSTANCE = \
                     MeshDataProviderRegistry.__MeshDataProviderRegistry()
         return MeshDataProviderRegistry.__INSTANCE
-    

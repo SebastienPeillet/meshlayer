@@ -39,7 +39,7 @@ class MeshDataProvider(QgsDataProvider):
         return numpy.empty((0,3), dtype=numpy.float32)
 
     def triangles(self):
-        """return a list of triangles described by node indices, 
+        """return a list of triangles described by node indices,
         watch out: indices start at zero"""
         return numpy.empty((0,3), dtype=numpy.int32)
 
@@ -89,4 +89,3 @@ class MeshDataProvider(QgsDataProvider):
         element.setAttribute("uri", self.dataSourceUri())
         element.setAttribute("dateIndex", self.__didx)
         return True
-

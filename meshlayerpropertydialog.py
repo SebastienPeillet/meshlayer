@@ -33,7 +33,7 @@ class MeshLayerPropertyDialog(QDialog):
             img = QImage(fil).scaled(QSize(30,30))
             action = QAction(QIcon(QPixmap.fromImage(img)), name, self.colorButton)
             def emitter(f):
-                def func(flag=None): 
+                def func(flag=None):
                     self.colorButton.setIcon(QIcon(f))
                     self.__colorRampChanged.emit(f)
                 return func
@@ -42,7 +42,7 @@ class MeshLayerPropertyDialog(QDialog):
             menu.addAction(action)
 
         self.colorButton.setIcon(QIcon(layer.colorLegend().colorRamp()))
-        
+
         self.__colorRampChanged.connect(layer.colorLegend().setColorRamp)
         self.minValue.textChanged.connect(layer.colorLegend().setMinValue)
         self.maxValue.textChanged.connect(layer.colorLegend().setMaxValue)
@@ -105,9 +105,9 @@ class MeshLayerPropertyDialog(QDialog):
                 return
 
             item = self.tableWidget.item(row, 0)
-            color = QColorDialog.getColor(item.background().color(), self) 
+            color = QColorDialog.getColor(item.background().color(), self)
             if color.isValid(): # false on user cancel
-                item.setBackground(QBrush(color)) 
+                item.setBackground(QBrush(color))
 
         def removeGraduation(flag=None):
             while len(self.tableWidget.selectedRanges()):
@@ -188,7 +188,7 @@ class MeshLayerPropertyDialog(QDialog):
             img = QImage(fil).scaled(QSize(24,24))
             action = QAction(QIcon(QPixmap.fromImage(img)), name, self.classColorButton)
             def emitter(f):
-                def func(flag=None): 
+                def func(flag=None):
                     img = QImage(f).scaled(QSize(24,24))
                     self.classColorButton.setIcon(QIcon(QPixmap.fromImage(QImage(f).scaled(QSize(24,24)))))
                     self.__classColor = f
@@ -207,17 +207,17 @@ class MeshLayerPropertyDialog(QDialog):
         self.__classColorChanged.connect(changeClassColors)
 
         def saveClasses(flag=None):
-           fileName = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)") 
+           fileName = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
            if not fileName:
                return #cancelled
            with open(fileName, 'w') as fil:
                for color, min_, max_ in layer.colorLegend().graduation():
                    fil.write("%s %s %s\n"%(color.name(), str(min_), str(max_)))
-        
+
         self.saveButton.clicked.connect(saveClasses)
 
         def loadClasses(flag=None):
-            fileName = QFileDialog.getOpenFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)") 
+            fileName = QFileDialog.getOpenFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
             if not fileName:
                 return #cancelled
             graduation = []
@@ -229,5 +229,4 @@ class MeshLayerPropertyDialog(QDialog):
             updateGraduation()
 
         self.loadButton.clicked.connect(loadClasses)
-
 
