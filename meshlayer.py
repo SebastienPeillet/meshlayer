@@ -23,7 +23,9 @@ from opengl_layer import OpenGlLayer
 from meshdataproviderregistry import MeshDataProviderRegistry
 from meshlayerpropertydialog import MeshLayerPropertyDialog
 
-from utilities import linemerge, Timer
+from utilities import Timer
+from shapely.ops import linemerge
+from shapely.geometry import LineString, MultiLineString
 
 class MeshLayerType(QgsPluginLayerType):
     def __init__(self):
@@ -243,13 +245,19 @@ class MeshLayer(OpenGlLayer):
                                 else None
                         if alpha: # the isoline crosses the edge
                             assert alpha >= 0 and alpha <= 1
-                            line.append( (1-alpha)*vtx[edge[0]] + alpha*vtx[edge[1]])
+                            line.append(tuple((1-alpha)*vtx[edge[0]] + alpha*vtx[edge[1]]))
                         else: # the edge is part of the isoline
-                            line.append(vtx[edge[0]])
-                            line.append(vtx[edge[1]])
+                            line.append(tuple(vtx[edge[0]]))
+                            line.append(tuple(vtx[edge[1]]))
                 if numpy.any(line[0] != line[-1]):
                     lines[-1].append(line)
-            lines[-1] = linemerge(lines[-1])
+            if len(lines[-1]):
+                m = linemerge([LineString(l) for l in lines[-1]])
+                if isinstance(m, LineString):
+                    lines[-1] = [list(m.coords)]
+                else:
+                    assert(isinstance(m, MultiLineString))
+                    lines[-1] = [list(l.coords) for l in m]
         return lines
 
 

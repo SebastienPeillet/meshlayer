@@ -3,6 +3,7 @@
 import time
 import os
 from math import log, exp as exp_
+from collections import defaultdict
 
 def complete_filename(name):
     return os.path.join(os.path.dirname(__file__), name)
@@ -26,41 +27,38 @@ def multiplier(value):
 
 def linemerge(lines):
     """Returns a (set of) LineString(s) formed by sewing together a multilinestring."""
-    graph = {}
+    graph = defaultdict(set)
     # first build a bidirectional graph
     for line in lines:
         b = tuple(line[0])
         e = tuple(line[-1])
-        if b in graph:
-            graph[b].add(e)
-        else:
-            graph[b] = set([e])
-        if e in graph:
-            graph[e].add(b)
-        else:
-            graph[e] = set([b])
+        graph[b].add(e)
+        graph[e].add(b)
+    for k, v in graph.iteritems():
+        assert(len(v) in (1,2))
 
     # now consume the graph
     if not len(graph):
         return []
-    nxt = graph.iterkeys().next()
-    out = [[nxt]]
+
+    def depth_first_append(graph, node):
+        connected=[node]
+        direction = "first"
+        neigbors = graph[node]
+        del graph[node]
+        for n in neigbors:
+            if n in graph:
+                if direction == "first":
+                    connected += depth_first_append(graph, n)
+                #else:
+                #    connected = list(reversed(depth_first_append(graph, n))) + connected
+            direction = "second"
+        return connected
+
+    out = []
     while len(graph):
-        #assert len(graph[nxt]) == 1 or len(graph[nxt]) == 2
-        prev = nxt
-        nxt = None
-        while len(graph[prev]) and nxt not in graph:
-            nxt = graph[prev].pop()
-        graph.pop(prev, None)
-        if nxt not in graph:
-            if nxt:
-                out[-1].append(nxt)
-            if not len(graph):
-                break
-            nxt = graph.iterkeys().next()
-            out.append([nxt])
-        else:
-            out[-1].append(nxt)
+        nxt = graph.iterkeys().next()
+        out.append(depth_first_append(graph, nxt))
     return out
 
 # run as script for testing
