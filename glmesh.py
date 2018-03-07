@@ -40,7 +40,8 @@ class ColorLegend(QGraphicsScene):
 
 
     def __init__(self, parent=None):
-        QGraphicsScene.__init__(self, parent)
+        #QGraphicsScene.__init__(self, parent)
+        super(ColorLegend, self).__init__()
         self.__minValue = 0
         self.__maxValue = 1
         self.__transparency = 0

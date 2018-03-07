@@ -225,8 +225,12 @@ class MeshLayer(OpenGlLayer):
         lines = []
         for value in values:
             lines.append([])
-            val = self.__meshDataProvider.nodeValues() - float(value)
-            # we filer triangles in which the value is negative on at least
+            if self.__meshDataProvider.valueAtElement():
+                val = self.__meshDataProvider.elementValues() - float(value)
+            else:
+                val = self.__meshDataProvider.nodeValues() - float(value)
+
+            # we filter triangles in which the value is negative on at least
             # one node and positive on at leat one node
             filtered = idx[numpy.logical_or(
                 val[idx[:, 0]]*val[idx[:, 1]] <= 0,
@@ -240,17 +244,18 @@ class MeshLayer(OpenGlLayer):
                              sorted([tri[1], tri[2]]),
                              sorted([tri[2], tri[0]])]:
                     if val[edge[0]]*val[edge[1]] <= 0:
-                        alpha = -val[edge[0]]/(val[edge[1]] - val[edge[0]])\
-                                if val[edge[1]] != val[edge[0]]\
-                                else None
-                        if alpha: # the isoline crosses the edge
+                        if val[edge[1]] != val[edge[0]]:
+                            alpha = -val[edge[0]]/(val[edge[1]] - val[edge[0]])
                             assert alpha >= 0 and alpha <= 1
                             line.append(tuple((1-alpha)*vtx[edge[0]] + alpha*vtx[edge[1]]))
                         else: # the edge is part of the isoline
+                            print "meshlayer:isovalues: ", value, edge[0], edge[1], val[edge[0]], val[edge[1]], vtx[edge[0]], vtx[edge[1]]
                             line.append(tuple(vtx[edge[0]]))
                             line.append(tuple(vtx[edge[1]]))
-                if numpy.any(line[0] != line[-1]):
-                    lines[-1].append(line)
+                # avoiding loops
+                l = list(set(line))
+                if len(l) > 1:
+                    lines[-1].append(l)
             if len(lines[-1]):
                 m = linemerge([LineString(l) for l in lines[-1]])
                 if isinstance(m, LineString):
