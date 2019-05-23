@@ -157,7 +157,7 @@ class ColorLegend(QGraphicsScene):
         """refresh the legend"""
         self.clear()
         grp = self.createItems()
-        self.setSceneRect(grp.boundingRect().adjusted(0,0,100,20))
+        self.setSceneRect(grp.boundingRect().adjusted(0,0,10,20))
         for item in grp.childItems():
             self.addItem(item);
 
