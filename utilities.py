@@ -10,8 +10,8 @@ def complete_filename(name):
 
 def format_(min_, max_):
     format_ = "%.2e"
-    if max_ < 10000 and min_ >= 0.1:
-        format_ = "%.1f"
+    if max_ < 10000 and abs(min_) >= 0.1:
+        format_ = "%.2f"
     return format_
 
 def multiplier(value):
