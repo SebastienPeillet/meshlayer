@@ -1,11 +1,15 @@
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 # -*- coding: UTF-8 -*-
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4 import uic
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from qgis.PyQt import uic
 
-from utilities import format_, complete_filename
-from glmesh import ColorLegend
+from .utilities import format_, complete_filename
+from .glmesh import ColorLegend
 from math import exp, log
 
 from qgis.core import *
@@ -29,7 +33,7 @@ class MeshLayerPropertyDialog(QDialog):
 
         menu = QMenu(self.colorButton)
         self.colorButton.setMenu(menu)
-        for name, fil in ColorLegend.availableRamps().iteritems():
+        for name, fil in ColorLegend.availableRamps().items():
             img = QImage(fil).scaled(QSize(30,30))
             action = QAction(QIcon(QPixmap.fromImage(img)), name, self.colorButton)
             def emitter(f):
@@ -182,7 +186,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.classColorButton.setMenu(classMenu)
         self.__classColor = None
         firstAction = None
-        for name, fil in ColorLegend.availableRamps().iteritems():
+        for name, fil in ColorLegend.availableRamps().items():
             if fil[-14:] != 'continuous.svg':
                 continue
             img = QImage(fil).scaled(QSize(24,24))
@@ -207,7 +211,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.__classColorChanged.connect(changeClassColors)
 
         def saveClasses(flag=None):
-           fileName = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
+           fileName, __ = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
            if not fileName:
                return #cancelled
            with open(fileName, 'w') as fil:
@@ -217,7 +221,7 @@ class MeshLayerPropertyDialog(QDialog):
         self.saveButton.clicked.connect(saveClasses)
 
         def loadClasses(flag=None):
-            fileName = QFileDialog.getOpenFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
+            fileName, __ = QFileDialog.getOpenFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
             if not fileName:
                 return #cancelled
             graduation = []

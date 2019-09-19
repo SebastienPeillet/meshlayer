@@ -1,13 +1,14 @@
 # coding: utf-8
 
+from __future__ import print_function
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 
 from qgis.core import *
 
-from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import QMutex, QSize, QThread, pyqtSignal
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QPainter, QImage
 
 from .utilities import Timer
 
@@ -24,6 +25,15 @@ class OpenGlLayerType(QgsPluginLayerType):
     def showLayerProperties(self, layer):
         #self.__dlg = PropertyDialog(layer)
         return False
+
+class OpenGlRenderer(QgsMapLayerRenderer):
+    def __init__(self, layerId, rendererContext, layer):
+        super(OpenGlRenderer, self).__init__(layerId)
+        self.rendererContext = rendererContext
+        self.layer = layer
+
+    def render(self):
+        return self.layer.draw(self.rendererContext)
 
 class OpenGlLayer(QgsPluginLayer):
     """Base class to encapsulate the tricks to create OpenGL layers
@@ -42,7 +52,8 @@ class OpenGlLayer(QgsPluginLayer):
     __imageChangeRequested = pyqtSignal()
 
     def __print(self, msg):
-        print msg
+        # fix_print_with_import
+        print(msg)
 
     def __raise(self, err):
         raise Exception(err)
@@ -77,7 +88,8 @@ class OpenGlLayer(QgsPluginLayer):
         painter.drawText(100, 100, "GlMesh.image default implementation")
         painter.end()
         img.save('/tmp/toto.png')
-        print "default image, we should not be here"
+        # fix_print_with_import
+        print("default image, we should not be here")
         return img
 
     def __drawInMainThread(self):
@@ -120,3 +132,5 @@ class OpenGlLayer(QgsPluginLayer):
             self.__drawException.emit(traceback.format_exc())
             return False
 
+    def createMapRenderer(self, rendererContext):
+        return OpenGlRenderer(self.id(), rendererContext, self)

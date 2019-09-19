@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import absolute_import
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 
 from qgis.core import *
 
-from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import Qt, QSizeF, QSize, QRectF, QThread
+from PyQt5.QtWidgets import QApplication
 
 import numpy
 from math import pow, log, ceil, sin, cos, pi
@@ -17,13 +18,13 @@ import re
 import time
 import traceback
 
-from glmesh import GlMesh, ColorLegend
-from opengl_layer import OpenGlLayer
+from .glmesh import GlMesh, ColorLegend
+from .opengl_layer import OpenGlLayer
 
-from meshdataproviderregistry import MeshDataProviderRegistry
-from meshlayerpropertydialog import MeshLayerPropertyDialog
+from .meshdataproviderregistry import MeshDataProviderRegistry
+from .meshlayerpropertydialog import MeshLayerPropertyDialog
 
-from utilities import Timer
+from .utilities import Timer
 from shapely.ops import linemerge
 from shapely.geometry import LineString, MultiLineString
 
@@ -86,9 +87,9 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
             ctx.painter.restore()
         return im
 
-class MeshLayerLegend(QgsDefaultPluginLayerLegend):
+class MeshLayerLegend(QgsMapLayerLegend):
     def __init__(self, layer, legend):
-        QgsDefaultPluginLayerLegend.__init__(self, layer)
+        QgsMapLayerLegend.__init__(self, layer)
         self.nodes = []
         self.__legend = legend
 
@@ -147,21 +148,21 @@ class MeshLayer(OpenGlLayer):
         self.legendChanged.emit()
         self.triggerRepaint()
 
-    def readXml(self, node):
+    def readXml(self, node, rwcontext):
         element = node.toElement()
         provider = node.namedItem("meshDataProvider").toElement()
         meshDataProvider = MeshDataProviderRegistry.instance().provider(
                 provider.attribute("name"), provider.attribute("uri"))
-        if not meshDataProvider.readXml(node.namedItem("meshDataProvider")):
+        if not meshDataProvider.readXml(node.namedItem("meshDataProvider"), rwcontext):
             return False
 
         self.__load(meshDataProvider)
 
-        if not self.__legend.readXml(node.namedItem("colorLegend")):
+        if not self.__legend.readXml(node.namedItem("colorLegend"), rwcontext):
             return False
         return True
 
-    def writeXml(self, node, doc):
+    def writeXml(self, node, doc, rwcontext):
         """write plugin layer type to project (essential to be read from project)"""
         element = node.toElement()
         element.setAttribute("debug", "just a test")
@@ -169,12 +170,12 @@ class MeshLayer(OpenGlLayer):
         element.setAttribute("name", MeshLayer.LAYER_TYPE)
 
         dataProvider = doc.createElement("meshDataProvider")
-        if not self.__meshDataProvider.writeXml(dataProvider, doc):
+        if not self.__meshDataProvider.writeXml(dataProvider, doc, rwcontext):
             return False
         element.appendChild(dataProvider)
 
         colorLegend = doc.createElement("colorLegend")
-        if not self.__legend.writeXml(colorLegend, doc):
+        if not self.__legend.writeXml(colorLegend, doc, rwcontext):
             return False
         element.appendChild(colorLegend)
         return True
@@ -194,8 +195,8 @@ class MeshLayer(OpenGlLayer):
 
         if transform:
             ext = transform.transform(ext)
-            if transform.destCRS() != self.__destCRS:
-                self.__destCRS = transform.destCRS()
+            if transform.destinationCrs() != self.__destCRS:
+                self.__destCRS = transform.destinationCrs()
                 vtx = numpy.array(self.__meshDataProvider.nodeCoord())
                 def transf(x):
                     p = transform.transform(x[0], x[1])
@@ -215,7 +216,8 @@ class MeshLayer(OpenGlLayer):
                  mapToPixel.mapUnitsPerPixel()),
                  mapToPixel.mapRotation())
         if self.__timing:
-            print timer.reset("render 2D mesh image")
+            # fix_print_with_import
+            print(timer.reset("render 2D mesh image"))
         return img
 
     def isovalues(self, values):
@@ -249,7 +251,8 @@ class MeshLayer(OpenGlLayer):
                             assert alpha >= 0 and alpha <= 1
                             line.append(tuple((1-alpha)*vtx[edge[0]] + alpha*vtx[edge[1]]))
                         else: # the edge is part of the isoline
-                            print "meshlayer:isovalues: ", value, edge[0], edge[1], val[edge[0]], val[edge[1]], vtx[edge[0]], vtx[edge[1]]
+                            # fix_print_with_import
+                            print("meshlayer:isovalues: ", value, edge[0], edge[1], val[edge[0]], val[edge[1]], vtx[edge[0]], vtx[edge[1]])
                             line.append(tuple(vtx[edge[0]]))
                             line.append(tuple(vtx[edge[1]]))
                 # avoiding loops
@@ -282,18 +285,24 @@ if __name__ == "__main__":
 
     uri = 'directory='+sys.argv[1]+' crs=epsg:2154'
     provider = MeshDataProviderRegistry.instance().provider("wind", uri)
-    print provider
-    print provider.crs()
-    print provider.isValid()
-    print "####################"
+    # fix_print_with_import
+    print(provider)
+    # fix_print_with_import
+    print(provider.crs())
+    # fix_print_with_import
+    print(provider.isValid())
+    # fix_print_with_import
+    print("####################")
 
 
 
 
     layer = MeshLayer(uri, 'test_layer', "wind")
     layer.dataProvider().setDate(int(sys.argv[2]))
-    print layer.dataProvider().dataSourceUri()
-    print layer.dataProvider().nodeValues()
+    # fix_print_with_import
+    print(layer.dataProvider().dataSourceUri())
+    # fix_print_with_import
+    print(layer.dataProvider().nodeValues())
 
     exit(0)
     # the rest should be ported to a specific test
@@ -302,7 +311,8 @@ if __name__ == "__main__":
     start = time.time()
     values = [float(v) for v in sys.argv[4:]]
     lines = layer.isovalues(values)
-    print "total time ", time.time() - start
+    # fix_print_with_import
+    print("total time ", time.time() - start)
     isolines = QgsVectorLayer("MultiLineString?crs=epsg:27572&field=value:double", "isovalues", "memory")
     pr = isolines.dataProvider()
     features = []

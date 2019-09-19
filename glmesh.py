@@ -1,16 +1,38 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
+from __future__ import absolute_import
+from builtins import zip
+from builtins import str
+from builtins import range
 
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.QtOpenGL import QGLPixelBuffer, QGLFormat, QGLContext
+from PyQt5.QtCore import pyqtSignal, QObject, QPoint, QLineF, QSize, QThread, Qt
+from PyQt5.QtGui import (
+        QTransform,
+        QPainter,
+        QImage,
+        QFontMetrics,
+        QFont,
+        QPixmap,
+        QOpenGLContext,
+        QOffscreenSurface,
+        QOpenGLTexture,
+        QOpenGLFramebufferObjectFormat,
+        QOpenGLFramebufferObject)
+from PyQt5.QtWidgets import (
+        QGraphicsScene,
+        QApplication,
+        QGraphicsItemGroup,
+        QGraphicsTextItem,
+        QGraphicsPixmapItem,
+        QGraphicsLineItem)
+from PyQt5.QtOpenGL import QGLFormat, QGLContext
 
 import numpy
 from math import log, ceil, exp
 
-from utilities import complete_filename, format_
+from .utilities import complete_filename, format_
 
 def roundUpSize(size):
     """return size roudup to the nearest power of 2"""
@@ -41,14 +63,16 @@ class ColorLegend(QGraphicsScene):
 
     def __init__(self, parent=None):
         #QGraphicsScene.__init__(self, parent)
-        super(ColorLegend, self).__init__()
+        super(ColorLegend, self).__init__(parent)
         self.__minValue = 0
         self.__maxValue = 1
         self.__transparency = 0
         self.__uniformLocations = {}
         self.__title = "no title"
         self.__colorRampFile = ColorLegend.availableRamps()[u"Bleu - Rouge"]
-        self.__colorRamp = QImage(self.__colorRampFile)
+        rot = QTransform()
+        rot.rotate(180)
+        self.__colorRamp = QImage(self.__colorRampFile).transformed(rot)
         self.__units = ""
         self.__scale = "linear"
         self.__pixelColor = ColorLegend.__pixelColorContinuous
@@ -195,7 +219,7 @@ class ColorLegend(QGraphicsScene):
                 grp.addToGroup(text)
 
         else:
-            values = self.values()
+            values = list(self.values())
 
             barHeight = textHeight*len(values)*1.2
             tickSpacing = float(barHeight)/(len(values)-1)
@@ -284,7 +308,9 @@ class ColorLegend(QGraphicsScene):
 
     def setColorRamp(self, rampImageFile):
         self.__colorRampFile = rampImageFile
-        self.__colorRamp = QImage(rampImageFile)
+        rot = QTransform()
+        rot.rotate(180)
+        self.__colorRamp = QImage(rampImageFile).transformed(rot)
         self.__refresh()
         self.symbologyChanged.emit()
 
@@ -315,13 +341,20 @@ class ColorLegend(QGraphicsScene):
 
         # texture
         glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, glcontext.bindTexture(self.__colorRamp))
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT)
+        self.tex = QOpenGLTexture(self.__colorRamp)
+        self.tex.setWrapMode(QOpenGLTexture.DirectionS, QOpenGLTexture.MirroredRepeat)
+        self.tex.setWrapMode(QOpenGLTexture.DirectionT, QOpenGLTexture.MirroredRepeat)
+        self.tex.setWrapMode(QOpenGLTexture.DirectionT, QOpenGLTexture.MirroredRepeat)
+        self.tex.setMagnificationFilter(QOpenGLTexture.Linear)
+        self.tex.setMinificationFilter(QOpenGLTexture.Linear)
+        #glBindTexture(GL_TEXTURE_2D, glcontext.bindTexture(self.__colorRamp))
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT)
+        self.tex.bind()
 
-    def readXml(self, node):
+    def readXml(self, node, rwcontext):
         element = node.toElement()
         self.setTitle(element.attribute("title"))
         self.setMinValue(element.attribute("minValue"))
@@ -339,7 +372,7 @@ class ColorLegend(QGraphicsScene):
         self.__refresh()
         return True
 
-    def writeXml(self, node, doc):
+    def writeXml(self, node, doc, rwcontext):
         element = node.toElement()
         element.setAttribute("title", self.__title)
         element.setAttribute("minValue", str(self.__minValue))
@@ -371,6 +404,17 @@ class GlMesh(QObject):
         self.__recompileShader = False
 
         self.__vtx[:,2] = 0
+
+        if QApplication.instance().thread() != QThread.currentThread():
+            raise RuntimeError("trying to use gl surface creation outside of main thread")
+
+        self.__gl_surface = QOffscreenSurface()
+        self.__gl_surface.create()
+
+        self.__gl_ctx = QOpenGLContext()
+        if not self.__gl_ctx.create():
+            raise RuntimeError("unable to create gl context")
+
 
     def __recompileNeeded(self):
         self.__recompileShader = True
@@ -426,20 +470,18 @@ class GlMesh(QObject):
         self.__recompileShader = False
 
     def __resize(self, roundupImageSize):
-        # QGLPixelBuffer size must be power of 2
+        # QOpenGLFramebufferObject size must be power of 2
         assert roundupImageSize == roundUpSize(roundupImageSize)
 
-        # force alpha format, it should be the default,
-        # but isn't all the time (uninitialized)
-        fmt = QGLFormat()
-        fmt.setAlpha(True)
+        fmt = QOpenGLFramebufferObjectFormat()
 
-        self.__pixBuf = QGLPixelBuffer(roundupImageSize, fmt)
-        assert self.__pixBuf.format().alpha()
-        self.__pixBuf.makeCurrent()
-        self.__pixBuf.bindToDynamicTexture(self.__pixBuf.generateDynamicTexture())
+        self.__gl_ctx.makeCurrent(self.__gl_surface)
+        self.__pixBuf = QOpenGLFramebufferObject(roundupImageSize, fmt)
+        bound = self.__pixBuf.bind()
+        # force viewport on entire buffer /!\
+        glViewport(0,0, roundupImageSize.width(), roundupImageSize.height())
         self.__compileShaders()
-        self.__pixBuf.doneCurrent()
+        self.__gl_ctx.doneCurrent()
 
     def resetCoord(self, vtx):
         self.__vtx = numpy.require(vtx, numpy.float32, 'F')
@@ -460,11 +502,11 @@ class GlMesh(QObject):
             return img
 
         roundupSz = roundUpSize(imageSize)
+
         if not self.__pixBuf \
                 or roundupSz.width() != self.__pixBuf.size().width() \
                 or roundupSz.height() != self.__pixBuf.size().height():
             self.__resize(roundupSz)
-
 
         val = numpy.require(values, numpy.float32) \
                 if not isinstance(values, numpy.ndarray)\
@@ -472,20 +514,22 @@ class GlMesh(QObject):
         if self.__colorPerElement:
             val = numpy.concatenate((val,val,val))
 
-        self.__pixBuf.makeCurrent()
+        self.__gl_ctx.makeCurrent(self.__gl_surface)
 
         if self.__recompileShader:
             self.__compileShaders()
 
         glClearColor(0., 0., 0., 0.)
+
+        glClear(GL_COLOR_BUFFER_BIT)
+
         glEnableClientState(GL_VERTEX_ARRAY)
         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
         glEnable(GL_TEXTURE_2D)
 
         glShadeModel(GL_FLAT)
-
-        glClear(GL_COLOR_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
+
         glLoadIdentity()
 
         # scale
@@ -502,14 +546,14 @@ class GlMesh(QObject):
 
         glUseProgram(self.__shaders)
 
-        self.__legend._setUniforms(self.__pixBuf)
+        self.__legend._setUniforms(self.__gl_ctx)
 
         glVertexPointerf(self.__vtx)
         glTexCoordPointer(1, GL_FLOAT, 0, val)
         glDrawElementsui(GL_TRIANGLES, self.__idx)
 
         img = self.__pixBuf.toImage()
-        self.__pixBuf.doneCurrent()
+        self.__gl_ctx.doneCurrent()
 
         return img.copy( .5*(roundupSz.width()-imageSize.width()),
                          .5*(roundupSz.height()-imageSize.height()),
@@ -529,7 +573,7 @@ def qimage2numpy(qimage, dtype = 'array'):
 	'array' to get a 3D uint8 array for color images."""
 	result_shape = (qimage.height(), qimage.width())
 	temp_shape = (qimage.height(),
-				  qimage.bytesPerLine() * 8 / qimage.depth())
+				  qimage.bytesPerLine() * 8 // qimage.depth())
 	if qimage.format() in (QImage.Format_ARGB32_Premultiplied,
 						   QImage.Format_ARGB32,
 						   QImage.Format_RGB32):
@@ -544,7 +588,7 @@ def qimage2numpy(qimage, dtype = 'array'):
 	else:
 		raise ValueError("qimage2numpy only supports 32bit and 8bit images")
 	# FIXME: raise error if alignment does not match
-	buf = qimage.bits().asstring(qimage.numBytes())
+	buf = qimage.bits().asstring(qimage.byteCount())
 	result = numpy.frombuffer(buf, dtype).reshape(temp_shape)
 	if result_shape != temp_shape:
 		result = result[:,:result_shape[1]]
@@ -642,7 +686,7 @@ if __name__ == "__main__":
     diff = qimage2numpy(img)[:,:,0:3] - qimage2numpy(ref)[:,:,0:3]
     numpy2qimage(diff).save("/tmp/diff.png")
 
-    assert numpy.linalg.norm(diff) < 200
+    assert(numpy.linalg.norm(diff) < 200)
 
     legend.setLogScale(True)
     img = mesh.image(

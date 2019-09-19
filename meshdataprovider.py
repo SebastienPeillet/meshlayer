@@ -2,7 +2,7 @@
 
 from qgis.core import *
 
-from PyQt4.QtCore import *
+from PyQt5.QtCore import *
 
 import numpy
 
@@ -16,7 +16,7 @@ class MeshDataProvider(QgsDataProvider):
     xmlLoaded = pyqtSignal()
 
     def __init__(self, uri):
-        self.__uri = QgsDataSourceURI(uri)
+        self.__uri = QgsDataSourceUri(uri)
         QgsDataProvider.__init__(self, uri)
         self.__didx = 0
         self.__dates = []
@@ -76,14 +76,14 @@ class MeshDataProvider(QgsDataProvider):
     def uri(self):
         return self.__uri
 
-    def readXml(self, node):
+    def readXml(self, node, rwcontext):
         element = node.toElement()
-        self.__uri = QgsDataSourceURI(element.attribute("uri"))
+        self.__uri = QgsDataSourceUri(element.attribute("uri"))
         self.__didx = int(element.attribute("dateIndex"))
         self.xmlLoaded.emit()
         return True
 
-    def writeXml(self, node, doc):
+    def writeXml(self, node, doc, rwcontext):
         element = node.toElement()
         element.setAttribute("name", self.name())
         element.setAttribute("uri", self.dataSourceUri())

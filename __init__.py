@@ -1,6 +1,7 @@
+from builtins import object
 # -*- coding: UTF-8 -*-
 
-class Plugin():
+class Plugin(object):
     def __init__(self, iface):
         pass
 
