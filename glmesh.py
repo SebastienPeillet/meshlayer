@@ -70,9 +70,7 @@ class ColorLegend(QGraphicsScene):
         self.__uniformLocations = {}
         self.__title = "no title"
         self.__colorRampFile = ColorLegend.availableRamps()[u"Bleu - Rouge"]
-        rot = QTransform()
-        rot.rotate(180)
-        self.__colorRamp = QImage(self.__colorRampFile).transformed(rot)
+        self.__colorRamp = QImage(self.__colorRampFile)
         self.__units = ""
         self.__scale = "linear"
         self.__pixelColor = ColorLegend.__pixelColorContinuous
@@ -308,9 +306,7 @@ class ColorLegend(QGraphicsScene):
 
     def setColorRamp(self, rampImageFile):
         self.__colorRampFile = rampImageFile
-        rot = QTransform()
-        rot.rotate(180)
-        self.__colorRamp = QImage(rampImageFile).transformed(rot)
+        self.__colorRamp = QImage(rampImageFile)
         self.__refresh()
         self.symbologyChanged.emit()
 
@@ -341,7 +337,9 @@ class ColorLegend(QGraphicsScene):
 
         # texture
         glEnable(GL_TEXTURE_2D)
-        self.tex = QOpenGLTexture(self.__colorRamp)
+        rot = QTransform()
+        rot.rotate(180)
+        self.tex = QOpenGLTexture(self.__colorRamp.transformed(rot))
         self.tex.setWrapMode(QOpenGLTexture.DirectionS, QOpenGLTexture.MirroredRepeat)
         self.tex.setWrapMode(QOpenGLTexture.DirectionT, QOpenGLTexture.MirroredRepeat)
         self.tex.setWrapMode(QOpenGLTexture.DirectionT, QOpenGLTexture.MirroredRepeat)
@@ -679,9 +677,7 @@ if __name__ == "__main__":
             )
     img.save('/tmp/test_gl_mesh.png')
     img = QImage('/tmp/test_gl_mesh.png')
-    rot = QTransform()
-    rot.rotate(180)
-    ref = QImage(complete_filename('test_data/test_gl_mesh.png'))#.transformed(rot)
+    ref = QImage(complete_filename('test_data/test_gl_mesh.png'))
 
     diff = qimage2numpy(img)[:,:,0:3] - qimage2numpy(ref)[:,:,0:3]
     numpy2qimage(diff).save("/tmp/diff.png")
