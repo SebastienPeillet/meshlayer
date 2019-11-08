@@ -8,6 +8,7 @@ from OpenGL.GL import shaders
 from qgis.core import *
 
 from PyQt5.QtCore import Qt, QSizeF, QSize, QRectF, QThread
+from PyQt5.QtGui import QOpenGLContext, QOffscreenSurface
 from PyQt5.QtWidgets import QApplication
 
 import numpy
@@ -113,6 +114,11 @@ class MeshLayer(OpenGlLayer):
             self.__load(MeshDataProviderRegistry.instance().provider(providerKey, uri))
         self.__destCRS = None
         self.__timing = False
+        self.willBeDeleted.connect(self.clean_texture)
+
+    def clean_texture(self):
+        self.__glMesh._GlMesh__gl_ctx.makeCurrent(self.__glMesh._GlMesh__gl_surface)
+        self._MeshLayer__glMesh._GlMesh__legend.tex.destroy()
 
     def setColorLegend(self, legend):
         if self.__legend:
