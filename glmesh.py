@@ -78,8 +78,6 @@ class ColorLegend(QGraphicsScene):
         self.__graduated = False
         self.__maskUnits = False
 
-    def __del__(self):
-        self.tex.destroy()
 
     @staticmethod
     def availableRamps():
