@@ -134,3 +134,9 @@ class OpenGlLayer(QgsPluginLayer):
 
     def createMapRenderer(self, rendererContext):
         return OpenGlRenderer(self.id(), rendererContext, self)
+
+    def setTransformContext(self, context):
+        """
+        Contains information about the context in which a coordinate transform is executed.
+        """
+        return
