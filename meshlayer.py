@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-
-from OpenGL.GL import *
 from OpenGL.GL import shaders
 
-from qgis.core import *
+from qgis.core import QgsPluginLayerType, QgsLegendStyle, QgsLayerTreeModelLegendNode, QgsRenderContext, QgsMapToPixel, QgsMapLayerLegend, QgsApplication, QgsVectorLayer, QgsFeature, QgsGeometry, QgsPoint, QgsVectorFileWriter
 
 from PyQt5.QtCore import Qt, QSizeF, QSize, QRectF, QThread
 from PyQt5.QtWidgets import QApplication
@@ -57,7 +55,7 @@ class MeshLayerLegendNode(QgsLayerTreeModelLegendNode):
             return None
 
     def draw(self, settings, ctx):
-        symbolLabelFont = settings.style(QgsComposerLegendStyle.SymbolLabel).font()
+        symbolLabelFont = settings.style(QgsLegendStyle.SymbolLabel).font()
         textHeight = settings.fontHeightCharacterMM(symbolLabelFont, '0');
 
         im = QgsLayerTreeModelLegendNode.ItemMetrics()
@@ -226,7 +224,7 @@ class MeshLayer(OpenGlLayer):
         for value in values:
             lines.append([])
             if self.__meshDataProvider.valueAtElement():
-                val = self.__meshDataProvider.elementValues() - float(value)
+                val = numpy.array(self.__meshDataProvider.nodeValues()) - float(value)
             else:
                 val = self.__meshDataProvider.nodeValues() - float(value)
 

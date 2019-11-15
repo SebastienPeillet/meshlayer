@@ -2,16 +2,16 @@ from builtins import str
 from builtins import range
 # -*- coding: UTF-8 -*-
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5.QtCore import pyqtSignal, QSize
+from PyQt5.QtGui import QBrush, QColor, QImage, QPixmap, QIcon, QDoubleValidator
+from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QMenu, QFileDialog, QAction, QColorDialog
 from qgis.PyQt import uic
 
 from .utilities import format_, complete_filename
 from .glmesh import ColorLegend
 from math import exp, log
 
-from qgis.core import *
+from qgis.core import QgsProject
 
 import numpy
 

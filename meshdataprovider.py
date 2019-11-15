@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from qgis.core import *
+from qgis.core import QgsDataProvider, QgsCoordinateReferenceSystem, QgsDataSourceUri
 
-from PyQt5.QtCore import *
+from PyQt5.QtCore import pyqtSignal
 
 import numpy
 
