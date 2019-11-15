@@ -1,9 +1,7 @@
 # coding: utf-8
-
-from OpenGL.GL import *
 from OpenGL.GL import shaders
 
-from qgis.core import *
+from qgis.core import QgsPluginLayerType, QgsMapLayerRenderer, QgsPluginLayer, QgsRectangle, QgsCoordinateReferenceSystem, QgsRenderContext
 
 from PyQt5.QtCore import QMutex, QSize, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
