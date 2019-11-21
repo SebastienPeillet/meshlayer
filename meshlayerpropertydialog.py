@@ -170,6 +170,7 @@ class MeshLayerPropertyDialog(QDialog):
         def classify(flag=None):
             self.tableWidget.setRowCount(0)
             nbClass = self.nbClassesSpinBox.value()
+            layer.colorLegend().setNbClass(nbClass)
             values = layer.colorLegend().values(nbClass+1)
             fmt = format_(min(values), max(values))
             for i in range(nbClass):

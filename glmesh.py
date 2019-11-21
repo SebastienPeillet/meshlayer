@@ -154,7 +154,6 @@ class ColorLegend(QGraphicsScene):
 
     def values(self, nbValues=7):
         """Return list of numerical values at 'equal' or 'logequal' intervals """
-        self.__nbClass = self.setNbClass(nbValues-1)
         values = []
         for i in range(nbValues):
             alpha = 1. - float(i)/(nbValues-1)
