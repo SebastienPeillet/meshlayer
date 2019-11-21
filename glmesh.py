@@ -76,13 +76,14 @@ class ColorLegend(QGraphicsScene):
         self.__graduation = []
         self.__graduated = False
         self.__maskUnits = False
+        self.__nbClass = 7
 
 
     @staticmethod
     def availableRamps():
-        return {u"Bleu - Rouge": complete_filename('images/ramp_blue_red_continuous.svg'),
-                u"Bleu - Mauve": complete_filename('images/ramp_blue_purple_discrete.png'),
-                u"Brûlé": complete_filename('images/ramp_burn_continuous.svg')}
+        return {u"Brûlé": complete_filename('images/ramp_burn_continuous.svg'),
+                u"Bleu - Mauve": complete_filename('images/ramp_blue_purple_discrete.svg'),
+                u"Bleu - Rouge": complete_filename('images/ramp_blue_red_continuous.svg')}
 
     def graduated(self):
         return self.__graduated
@@ -145,8 +146,15 @@ class ColorLegend(QGraphicsScene):
             }
             """
 
+    def nbClass(self):
+        return self.__nbClass
+
+    def setNbClass(self, nbClass):
+        self.__nbClass= nbClass
+
     def values(self, nbValues=7):
         """Return list of numerical values at 'equal' or 'logequal' intervals """
+        self.__nbClass = self.setNbClass(nbValues-1)
         values = []
         for i in range(nbValues):
             alpha = 1. - float(i)/(nbValues-1)
@@ -204,7 +212,7 @@ class ColorLegend(QGraphicsScene):
         if self.graduated():
             min_, max_ = (min([c[1] for c in self.__graduation]), max([c[2] for c in self.__graduation]))\
                     if len(self.__graduation) else (0,0)
-            fmt = format_(min_, max_)
+            fmt = "%.2e"
             for i, (color, min_, max_) in enumerate(self.__graduation):
                 pix = QPixmap(barWidth, textHeight*.8)
                 pix.fill(color)
@@ -321,6 +329,9 @@ class ColorLegend(QGraphicsScene):
 
     def colorRamp(self):
         return self.__colorRampFile
+
+    def colorRampImg(self):
+        return self.__colorRamp
 
     def _setUniformsLocation(self, shaders_):
         """Should be called once the shaders are compiled"""
