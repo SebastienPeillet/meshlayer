@@ -13,6 +13,7 @@ from PyQt5.QtGui import (
         QImage,
         QFontMetrics,
         QFont,
+        QColor,
         QPixmap,
         QOpenGLContext,
         QOffscreenSurface,
@@ -76,7 +77,7 @@ class ColorLegend(QGraphicsScene):
         self.__graduation = []
         self.__graduated = False
         self.__maskUnits = False
-        self.__nbClass = 7
+        self.__nbClass = len(self.__graduation)
 
 
     @staticmethod
@@ -105,6 +106,7 @@ class ColorLegend(QGraphicsScene):
     def setGraduation(self, graduation):
         """graduation is a list of tuple (color, min, max) the alpha componant is not considered"""
         self.__graduation = graduation
+        self.__nbValues =  len(graduation)
         self.toggleGraduation(bool(self.__graduation))
 
     def graduation(self):
