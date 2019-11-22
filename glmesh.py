@@ -106,7 +106,7 @@ class ColorLegend(QGraphicsScene):
     def setGraduation(self, graduation):
         """graduation is a list of tuple (color, min, max) the alpha componant is not considered"""
         self.__graduation = graduation
-        self.__nbValues =  len(graduation)
+        self.__nbClass =  len(graduation)
         self.toggleGraduation(bool(self.__graduation))
 
     def graduation(self):
