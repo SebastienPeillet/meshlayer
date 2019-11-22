@@ -16,6 +16,13 @@ from qgis.core import QgsProject
 import numpy
 
 class MeshLayerPropertyDialog(QDialog):
+    """
+    MeshLayerPropertyDialog
+
+    :params: layer  : Meshlayer
+
+    """
+
     __colorRampChanged = pyqtSignal(str)
     __classColorChanged = pyqtSignal(str)
     DEFAULT_NB_OF_CLASSES = 10
@@ -81,10 +88,6 @@ class MeshLayerPropertyDialog(QDialog):
         self.transparencySlider.valueChanged.connect(
              self.layer.colorLegend().setTransparencyPercent)
 
-        # floatValidator = QDoubleValidator()
-        # self.minValue.setValidator(floatValidator)
-        # self.maxValue.setValidator(floatValidator)
-
         self.updateMinMaxButton.clicked.connect(self.updateMinMax)
         if self.layer.colorLegend().graduated():
             self.symboTypeComboBox.setCurrentIndex(1)
@@ -106,6 +109,12 @@ class MeshLayerPropertyDialog(QDialog):
         self.show()
 
     def setMinValue(self):
+        """
+        Function to change min values in the colorLegend layer
+        Triggered on textChanged on minValue lineEdit.
+
+        """
+
         try :
             min = float(self.minValue.text())
             self.layer.colorLegend().setMinValue(min)
@@ -113,6 +122,11 @@ class MeshLayerPropertyDialog(QDialog):
             pass
 
     def setMaxValue(self):
+        """
+        Function to change max values in the colorLegend layer
+        Triggered on textChanged on maxValue lineEdit.
+
+        """
         try :
             max = float(self.maxValue.text())
             self.layer.colorLegend().setMaxValue(min)
@@ -120,6 +134,11 @@ class MeshLayerPropertyDialog(QDialog):
             pass
 
     def updateMinMax(self):
+        """
+        Function to update min/max  values in the dialog
+        Triggered on click on updateMinMaxButton.
+
+        """
         min_ = self.layer.dataProvider().minValue()
         max_ = self.layer.dataProvider().maxValue()
         fmt = format_(min_, max_)
@@ -127,10 +146,20 @@ class MeshLayerPropertyDialog(QDialog):
         self.maxValue.setText(fmt%max_)
 
     def logOnOff(self,flag):
+        """
+        Function to change linear/log scale in the colorLegend layer
+        Triggered on click on logCheckBox
+
+        """
         self.layer.colorLegend().setLogScale(self.logCheckBox.isChecked())
 
 
     def updateGraduation(self,item=None):
+        """
+        Function to update graduation in the colorLegend layer
+
+        """
+
         self.layer.colorLegend().setColorRamp(self.__classColor)
         classes = []
         for row in range(self.tableWidget.rowCount()):
@@ -157,6 +186,11 @@ class MeshLayerPropertyDialog(QDialog):
         self.layer.colorLegend().setGraduation(classes)
 
     def addGraduation(self,flag=None):
+        """
+        Function to add a row in the table widget used for graduation
+
+        """
+
         idx = self.tableWidget.rowCount()
         self.tableWidget.setRowCount(idx+1)
         colorItem = QTableWidgetItem()
@@ -170,6 +204,15 @@ class MeshLayerPropertyDialog(QDialog):
         self.tableWidget.setItem(idx, 2, QTableWidgetItem(fmt%max_))
 
     def editColor(self, row, colum):
+        """
+        Function to edit the color cell of a row in the table widget
+        Triggered on click on a cell if the cell is in the 0 column
+
+        :param: row : int
+        :param: column : int
+
+        """
+
         if colum != 0:
             return
 
@@ -179,12 +222,22 @@ class MeshLayerPropertyDialog(QDialog):
             item.setBackground(QBrush(color))
 
     def removeGraduation(self, flag=None):
+        """
+        Function to remove a row in the table widget used for graduation
+
+        """
         while len(self.tableWidget.selectedRanges()):
             for range_ in self.tableWidget.selectedRanges():
                 self.tableWidget.removeRow(range_.bottomRow())
         self.updateGraduation()
 
     def setFromGraduation(self, graduation):
+        """
+        Function to set rows from graduation
+
+        :param: graduation : list of tuple => (QColor,float,float)
+
+        """
         self.tableWidget.setRowCount(0)
         min_, max_ = (min([c[1] for c in graduation]), max([c[2] for c in graduation])) if len(graduation) else (0,0)
         # fmt = format_(min_, max_)
@@ -200,6 +253,11 @@ class MeshLayerPropertyDialog(QDialog):
             self.tableWidget.setItem(idx, 2, QTableWidgetItem(fmt%class_[2]))
 
     def setSymbology(self, idx):
+        """
+        Function to set continuous/graduated sympbology
+
+        :param: idx : int
+        """
         if idx==0:
             self.layer.colorLegend().toggleGraduation(False)
         else:
@@ -208,6 +266,11 @@ class MeshLayerPropertyDialog(QDialog):
 
 
     def changeClassColors(self, f):
+        """
+        Function to set color ramp used for graduation
+
+        :param: f: str (path to the image)
+        """
         img = QImage(f)
         nbClass = self.tableWidget.rowCount()
         dh = (img.size().height()-1)/(nbClass-1) if nbClass>1 else 0
@@ -217,6 +280,10 @@ class MeshLayerPropertyDialog(QDialog):
         self.updateGraduation()
 
     def classify(self, flag=None):
+        """
+        Function to launch classification from dialog parameters
+
+        """
         self.tableWidget.setRowCount(0)
         nbClass = self.nbClassesSpinBox.value()
         self.layer.colorLegend().setNbClass(nbClass)
@@ -233,14 +300,21 @@ class MeshLayerPropertyDialog(QDialog):
         self.changeClassColors(self.__classColor)
 
     def saveClasses(self, flag=None):
-       fileName, __ = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
-       if not fileName:
+        """
+        Function to save symbology
+
+        """
+        fileName, __ = QFileDialog.getSaveFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
+        if not fileName:
            return #cancelled
-       with open(fileName, 'w') as fil:
+        with open(fileName, 'w') as fil:
            for color, min_, max_ in self.layer.colorLegend().graduation():
                fil.write("%s %s %s\n"%(color.name(), str(min_), str(max_)))
 
     def loadClasses(self, flag=None):
+        """
+        Function to load symbology
+        """
         fileName, __ = QFileDialog.getOpenFileName(None, u"Color scale", QgsProject.instance().fileName(), "Text file (*.txt)")
         if not fileName:
             return #cancelled

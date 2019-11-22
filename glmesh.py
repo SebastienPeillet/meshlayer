@@ -87,9 +87,17 @@ class ColorLegend(QGraphicsScene):
                 u"Bleu - Rouge": complete_filename('images/ramp_blue_red_continuous.svg')}
 
     def graduated(self):
+        """
+        Getter for graduated attribute. Graduated is boolean
+
+        """
         return self.__graduated
 
     def toggleGraduation(self, flag):
+        """
+        Activate or remove graduate symbology by sending pixelColor code.
+
+        """
         self.__graduated = bool(flag)
         if self.__graduated:
             self.__pixelColor = "vec4 pixelColor(float value)\n{\n"
@@ -110,6 +118,10 @@ class ColorLegend(QGraphicsScene):
         self.toggleGraduation(bool(self.__graduation))
 
     def graduation(self):
+        """
+        Getter for graduation attribute. Graduation is a list of tuple (Qcolor, min, max)
+
+        """
         return self.__graduation
 
     def _fragmentShader(self):
@@ -149,9 +161,17 @@ class ColorLegend(QGraphicsScene):
             """
 
     def nbClass(self):
+        """
+        Getter for nbClass attribute. Nbclass is a int used for graduated symbology
+
+        """
         return self.__nbClass
 
     def setNbClass(self, nbClass):
+        """
+        Setter for nbClass attribute. Nbclass is a int used for graduated symbology
+
+        """
         self.__nbClass= nbClass
 
     def values(self, nbValues=7):
@@ -193,6 +213,10 @@ class ColorLegend(QGraphicsScene):
             self.addItem(item);
 
     def maskUnits(self, flag):
+        """
+        Function to mask unit in the legend, used for probability map
+
+        """
         self.__maskUnits = flag
         self.symbologyChanged.emit()
 
@@ -244,21 +268,37 @@ class ColorLegend(QGraphicsScene):
         return grp
 
     def setLogScale(self, trueOrFalse=True):
+        """
+        Setter function to set linear/log scale
+
+        """
         self.__scale = "log" if trueOrFalse else "linear"
         self.__checkValues()
         self.__refresh()
         self.symbologyChanged.emit()
 
     def hasLogScale(self):
+        """
+        Getter function to set linear/log scale
+
+        """
         return self.__scale == "log"
 
     def setTitle(self, text):
+        """
+        Setter function to set the legend title
+
+        """
         assert text is not None
         self.__title = text
         self.__refresh()
         self.symbologyChanged.emit()
 
     def title(self):
+        """
+        Getter function to set the legend title
+
+        """
         return self.__title
 
     def setUnits(self, text):
@@ -285,6 +325,10 @@ class ColorLegend(QGraphicsScene):
             self.__maxValue = max(self.__maxValue, 1e-32)
 
     def setMinValue(self, value):
+        """
+        Setter function to update min value legend
+
+        """
         try:
             self.__minValue = float(value)
             self.__checkValues()
@@ -294,6 +338,10 @@ class ColorLegend(QGraphicsScene):
             return
 
     def setMaxValue(self, value):
+        """
+        Setter function to update max value legend
+
+        """
         try:
             self.__maxValue = float(value)
             self.__checkValues()
@@ -303,9 +351,17 @@ class ColorLegend(QGraphicsScene):
             return
 
     def setTransparencyPercent(self, value):
+        """
+        Setter function to update transparency values, from percent to float value
+
+        """
         self.setTransparency(value/100.)
 
     def setTransparency(self, value):
+        """
+        Setter function to update transparency values
+
+        """
         try:
             self.__transparency = float(value)
             self.__refresh()
@@ -314,24 +370,48 @@ class ColorLegend(QGraphicsScene):
             return
 
     def setColorRamp(self, rampImageFile):
+        """
+        Setter function to change the color ramp with a file path
+
+        """
         self.__colorRampFile = rampImageFile
         self.__colorRamp = QImage(rampImageFile)
         self.__refresh()
         self.symbologyChanged.emit()
 
     def transparencyPercent(self):
+        """
+        Getter function for transparency value, from float value to percent
+
+        """
         return int(self.__transparency*100)
 
     def minValue(self):
+        """
+        Getter function for min value
+
+        """
         return self.__minValue
 
     def maxValue(self):
+        """
+        Getter function for min value
+
+        """
         return self.__maxValue
 
     def colorRamp(self):
+        """
+        Getter function for colorRampFile value
+
+        """
         return self.__colorRampFile
 
     def colorRampImg(self):
+        """
+        Getter function for colorRamp image value
+
+        """
         return self.__colorRamp
 
     def _setUniformsLocation(self, shaders_):
@@ -365,6 +445,10 @@ class ColorLegend(QGraphicsScene):
         self.tex.bind()
 
     def readXml(self, node, rwcontext):
+        """
+        Function to read mesh legend information from project
+
+        """
         element = node.toElement()
         self.setTitle(element.attribute("title"))
         self.setMinValue(element.attribute("minValue"))
@@ -383,6 +467,9 @@ class ColorLegend(QGraphicsScene):
         return True
 
     def writeXml(self, node, doc, rwcontext):
+        """
+        Function to save mesh legend information in project
+        """
         element = node.toElement()
         element.setAttribute("title", self.__title)
         element.setAttribute("minValue", str(self.__minValue))
@@ -427,6 +514,10 @@ class GlMesh(QObject):
 
 
     def __recompileNeeded(self):
+        """
+        Set flag to recompile colorPixel
+
+        """
         self.__recompileShader = True
 
     def setColorPerElement(self, flag):
