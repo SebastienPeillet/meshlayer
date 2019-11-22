@@ -76,14 +76,14 @@ class MeshLayerPropertyDialog(QDialog):
             self.classMenu.addAction(action)
 
         self.__colorRampChanged.connect(self.layer.colorLegend().setColorRamp)
-        self.minValue.textChanged.connect(self.layer.colorLegend().setMinValue)
-        self.maxValue.textChanged.connect(self.layer.colorLegend().setMaxValue)
+        self.minValue.textChanged.connect(self.setMinValue)
+        self.maxValue.textChanged.connect(self.setMaxValue)
         self.transparencySlider.valueChanged.connect(
              self.layer.colorLegend().setTransparencyPercent)
 
-        floatValidator = QDoubleValidator()
-        self.minValue.setValidator(floatValidator)
-        self.maxValue.setValidator(floatValidator)
+        # floatValidator = QDoubleValidator()
+        # self.minValue.setValidator(floatValidator)
+        # self.maxValue.setValidator(floatValidator)
 
         self.updateMinMaxButton.clicked.connect(self.updateMinMax)
         if self.layer.colorLegend().graduated():
@@ -105,6 +105,19 @@ class MeshLayerPropertyDialog(QDialog):
 
         self.show()
 
+    def setMinValue(self):
+        try :
+            min = float(self.minValue.text())
+            self.layer.colorLegend().setMinValue(min)
+        except ValueError:
+            pass
+
+    def setMaxValue(self):
+        try :
+            max = float(self.maxValue.text())
+            self.layer.colorLegend().setMaxValue(min)
+        except ValueError:
+            pass
 
     def updateMinMax(self):
         min_ = self.layer.dataProvider().minValue()
@@ -174,7 +187,8 @@ class MeshLayerPropertyDialog(QDialog):
     def setFromGraduation(self, graduation):
         self.tableWidget.setRowCount(0)
         min_, max_ = (min([c[1] for c in graduation]), max([c[2] for c in graduation])) if len(graduation) else (0,0)
-        fmt = format_(min_, max_)
+        # fmt = format_(min_, max_)
+        fmt = "%.2e"
         for class_ in graduation:
             idx = self.tableWidget.rowCount()
             self.tableWidget.setRowCount(idx+1)
