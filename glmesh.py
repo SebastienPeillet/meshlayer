@@ -78,7 +78,7 @@ class ColorLegend(QGraphicsScene):
         self.__graduated = False
         self.__maskUnits = False
         self.__nbClass = len(self.__graduation)
-
+        self.tex = None
 
     @staticmethod
     def availableRamps():
@@ -334,8 +334,8 @@ class ColorLegend(QGraphicsScene):
             self.__checkValues()
             self.__refresh()
             self.symbologyChanged.emit()
-        except ValueError:
-            return
+        except TypeError:
+            pass
 
     def setMaxValue(self, value):
         """
@@ -347,7 +347,7 @@ class ColorLegend(QGraphicsScene):
             self.__checkValues()
             self.__refresh()
             self.symbologyChanged.emit()
-        except ValueError:
+        except TypeError:
             return
 
     def setTransparencyPercent(self, value):
