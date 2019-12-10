@@ -329,26 +329,20 @@ class ColorLegend(QGraphicsScene):
         Setter function to update min value legend
 
         """
-        try:
-            self.__minValue = float(value)
-            self.__checkValues()
-            self.__refresh()
-            self.symbologyChanged.emit()
-        except TypeError:
-            pass
+        self.__minValue = float(value)
+        self.__checkValues()
+        self.__refresh()
+        self.symbologyChanged.emit()
 
     def setMaxValue(self, value):
         """
         Setter function to update max value legend
 
         """
-        try:
-            self.__maxValue = float(value)
-            self.__checkValues()
-            self.__refresh()
-            self.symbologyChanged.emit()
-        except TypeError:
-            return
+        self.__maxValue = float(value)
+        self.__checkValues()
+        self.__refresh()
+        self.symbologyChanged.emit()
 
     def setTransparencyPercent(self, value):
         """
@@ -362,12 +356,9 @@ class ColorLegend(QGraphicsScene):
         Setter function to update transparency values
 
         """
-        try:
-            self.__transparency = float(value)
-            self.__refresh()
-            self.symbologyChanged.emit()
-        except ValueError:
-            return
+        self.__transparency = float(value)
+        self.__refresh()
+        self.symbologyChanged.emit()
 
     def setColorRamp(self, rampImageFile):
         """
