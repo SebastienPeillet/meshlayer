@@ -93,7 +93,7 @@ class ColorLegend(QGraphicsScene):
         """
         return self.__graduated
 
-    def toggleGraduation(self, flag, emit=True):
+    def toggleGraduation(self, flag):
         """
         Activate or remove graduate symbology by sending pixelColor code.
 
@@ -109,14 +109,13 @@ class ColorLegend(QGraphicsScene):
             self.__pixelColor += "}\n";
         else:
             self.__pixelColor = ColorLegend.__pixelColorContinuous
-        if emit :
-            self.symbologyChanged.emit()
+        self.symbologyChanged.emit()
 
-    def setGraduation(self, graduation, emit=True):
+    def setGraduation(self, graduation):
         """graduation is a list of tuple (color, min, max) the alpha componant is not considered"""
         self.__graduation = graduation
         self.__nbClass =  len(graduation)
-        self.toggleGraduation(bool(self.__graduation), emit)
+        self.toggleGraduation(bool(self.__graduation))
 
     def graduation(self):
         """
@@ -268,7 +267,7 @@ class ColorLegend(QGraphicsScene):
                 grp.addToGroup(line)
         return grp
 
-    def setLogScale(self, trueOrFalse=True, emit=True):
+    def setLogScale(self, trueOrFalse=True):
         """
         Setter function to set linear/log scale
 
@@ -285,7 +284,7 @@ class ColorLegend(QGraphicsScene):
         """
         return self.__scale == "log"
 
-    def setTitle(self, text, emit=True):
+    def setTitle(self, text):
         """
         Setter function to set the legend title
 
@@ -302,13 +301,12 @@ class ColorLegend(QGraphicsScene):
         """
         return self.__title
 
-    def setUnits(self, text, emit=True):
+    def setUnits(self, text):
         """set the units to display in legend"""
         assert text is not None
         self.__units = text
         self.__refresh()
-        if emit :
-            self.symbologyChanged.emit()
+        self.symbologyChanged.emit()
 
     def units(self):
         return self.__units
@@ -326,7 +324,7 @@ class ColorLegend(QGraphicsScene):
             self.__minValue = max(self.__minValue, 1e-32)
             self.__maxValue = max(self.__maxValue, 1e-32)
 
-    def setMinValue(self, value, emit=True):
+    def setMinValue(self, value):
         """
         Setter function to update min value legend
 
@@ -335,12 +333,11 @@ class ColorLegend(QGraphicsScene):
             self.__minValue = float(value)
             self.__checkValues()
             self.__refresh()
-            if emit :
-                self.symbologyChanged.emit()
+            self.symbologyChanged.emit()
         except TypeError:
             pass
 
-    def setMaxValue(self, value, emit=True):
+    def setMaxValue(self, value):
         """
         Setter function to update max value legend
 
@@ -349,8 +346,7 @@ class ColorLegend(QGraphicsScene):
             self.__maxValue = float(value)
             self.__checkValues()
             self.__refresh()
-            if emit :
-                self.symbologyChanged.emit()
+            self.symbologyChanged.emit()
         except TypeError:
             return
 
@@ -373,7 +369,7 @@ class ColorLegend(QGraphicsScene):
         except ValueError:
             return
 
-    def setColorRamp(self, rampImageFile, emit=True):
+    def setColorRamp(self, rampImageFile):
         """
         Setter function to change the color ramp with a file path
 
@@ -381,8 +377,7 @@ class ColorLegend(QGraphicsScene):
         self.__colorRampFile = rampImageFile
         self.__colorRamp = QImage(rampImageFile)
         self.__refresh()
-        if emit :
-            self.symbologyChanged.emit()
+        self.symbologyChanged.emit()
 
     def transparencyPercent(self):
         """
