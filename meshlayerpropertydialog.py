@@ -179,10 +179,6 @@ class MeshLayerPropertyDialog(QDialog):
                     self.tableWidget.item(row, 2).setBackground(QBrush(Qt.red))
             if min_ and max_:
                 #Avoid values outside range
-                if row==0 :
-                    max_=1000
-                elif row==self.tableWidget.rowCount()-1 :
-                    min_=-.09
                 classes.append((self.tableWidget.item(row, 0).background().color(), min_, max_))
 
         self.layer.colorLegend().setGraduation(classes)
